@@ -3,13 +3,7 @@ import { useEffect } from "react"
 import { Leaderboard } from "@/components/Leaderboard"
 import { MessagesPanel } from "@/components/MessagesPanel"
 import { AppShell } from "@/components/shell/AppShell"
-import { StatsSubTabs } from "@/components/shell/StatsSubTabs"
-import { BestLapPerClassChart } from "@/components/stats/BestLapPerClassChart"
-import { LeadingTable } from "@/components/stats/LeadingTable"
-import { SectorHeatmap } from "@/components/stats/SectorHeatmap"
-import { StatsClassFilter } from "@/components/stats/StatsClassFilter"
-import { StatsKpiStrip } from "@/components/stats/StatsKpiStrip"
-import { StatisticsPanel } from "@/components/StatisticsPanel"
+import { StatsTabSection } from "@/components/stats/StatsTabSection"
 import { TopQualifyingPanel } from "@/components/TopQualifyingPanel"
 import { TrackMapPanel } from "@/components/TrackMapPanel"
 import { useBreakpoint } from "@/hooks/useBreakpoint"
@@ -47,30 +41,7 @@ export function AppShellRouter() {
   return (
     <AppShell>
       {displayTab === "leaderboard" ? <Leaderboard /> : null}
-      {displayTab === "stats" ? (
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-6">
-          {bp !== "mobile" ? <StatsSubTabs /> : null}
-          <StatsKpiStrip />
-          <StatsClassFilter />
-          {bp === "mobile" ? (
-            <>
-              <BestLapPerClassChart />
-              <SectorHeatmap />
-            </>
-          ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-10 gap-6">
-              <div className="lg:col-span-6">
-                <BestLapPerClassChart />
-              </div>
-              <div className="lg:col-span-4">
-                <SectorHeatmap />
-              </div>
-            </div>
-          )}
-          <LeadingTable />
-          <StatisticsPanel />
-        </div>
-      ) : null}
+      {displayTab === "stats" ? <StatsTabSection bp={bp} /> : null}
       {displayTab === "messages" ? <MessagesPanel /> : null}
       {displayTab === "trackmap" ? <TrackMapPanel /> : null}
       {displayTab === "stq" && stqVisible ? <TopQualifyingPanel /> : null}

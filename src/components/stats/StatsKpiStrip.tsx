@@ -8,7 +8,7 @@
  *     with the rest of the dashboard (JetBrains Mono, tabular-nums via the font itself)
  *   - Missing data → em-dash "—" (U+2014), never the ASCII hyphen
  */
-import { useMemo } from "react"
+import { memo, useMemo } from "react"
 
 import { useI18n } from "@/i18n/I18nContext"
 import { formatLapSeconds } from "@/lib/lapTimes"
@@ -64,7 +64,7 @@ export function KpiCard({
   )
 }
 
-export function StatsKpiStrip() {
+export const StatsKpiStrip = memo(function StatsKpiStrip() {
   const stats = useLiveStore((s) => s.statistics)
   const excluded = useFilterStore((s) => s.excludedStatsClasses)
   const { t } = useI18n()
@@ -127,4 +127,4 @@ export function StatsKpiStrip() {
       />
     </section>
   )
-}
+})

@@ -35,10 +35,10 @@ const ITEMS: ReadonlyArray<SideNavItem> = [
 ]
 
 const ACTIVE_CLASS =
-  "bg-red-600/10 text-red-600 border-l-4 border-red-600 px-6 py-3 flex items-center gap-3 font-headline text-xs uppercase tracking-widest text-left"
+  "bg-red-600/10 text-red-600 border-l-4 border-red-600 px-6 py-3 flex items-center gap-3 font-headline text-xs uppercase tracking-widest text-left focus-ring"
 
 const INACTIVE_CLASS =
-  "text-zinc-500 px-6 py-3 flex items-center gap-3 hover:text-zinc-200 transition-colors font-headline text-xs uppercase tracking-widest text-left"
+  "text-zinc-500 px-6 py-3 flex items-center gap-3 hover:text-zinc-200 transition-colors font-headline text-xs uppercase tracking-widest text-left focus-ring"
 
 export function SideNav({
   activeTab,
@@ -94,9 +94,9 @@ export function SideNav({
           <button
             type="button"
             onClick={() => onLiveFeedClick?.()}
-            className="w-full bg-primary-container text-on-primary-container py-3 font-headline text-[10px] font-black tracking-widest uppercase hover:opacity-90 transition-opacity"
+            className="w-full bg-primary-container text-on-primary-container py-3 font-headline text-[10px] font-black tracking-widest uppercase hover:opacity-90 transition-opacity focus-ring"
           >
-            LIVE FEED
+            {t("shell.sideNav.liveFeed")}
           </button>
         </div>
       </div>

@@ -105,9 +105,9 @@ These rules are binding for the implementation:
 
 ### Empty / loading / error states
 
-1. **[offen]** As a viewer of a session **without PID 9002 yet** (Pre-session, or right after `LTS_TIMESYNC`), I want the tab to render a **skeleton with KPI placeholders, an empty chip bar, and a single "Statistik wird geladen…" line**, instead of the current "No statistics" string.
-2. **[offen]** As a viewer in a `LTS_NOT_FOUND` event, I want the existing `<EventNotFoundOverlay>` to keep priority over this tab, so the cockpit redesign does not mask the connection error.
-3. **[offen]** As a viewer when WebSocket is reconnecting, I want the band content to **dim to 60 % opacity** but remain visible (no flash to placeholder), so I do not lose context for the few seconds of a reconnect.
+1. **[done]** As a viewer of a session **without PID 9002 yet** (Pre-session, or right after `LTS_TIMESYNC`), I want the tab to render a **skeleton with KPI placeholders, an empty chip bar, and a single "Statistik wird geladen…" line**, instead of the current "No statistics" string.
+2. **[done]** As a viewer in a `LTS_NOT_FOUND` event, I want the existing `<EventNotFoundOverlay>` to keep priority over this tab, so the cockpit redesign does not mask the connection error (verified — handled by App.tsx, see App.test.tsx).
+3. **[done]** As a viewer when WebSocket is reconnecting, I want the band content to **dim to 60 % opacity** but remain visible (no flash to placeholder), so I do not lose context for the few seconds of a reconnect.
 
 ### Internationalisation
 

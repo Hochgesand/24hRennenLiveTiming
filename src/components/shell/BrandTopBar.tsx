@@ -88,17 +88,20 @@ export function BrandTopBar({ className }: BrandTopBarProps) {
               data-testid="brand-countdown"
               className="hidden md:inline font-mono text-[10px] tabular-nums text-zinc-400"
             >
-              {countdown ? "REM" : "END"} {endTimeLabel}
+              {countdown
+                ? t("shell.brand.countdownRemaining")
+                : t("shell.brand.countdownEnd")}{" "}
+              {endTimeLabel}
             </span>
           </div>
         ) : null}
         <div className="flex items-center gap-4">
           <button
             type="button"
-            aria-label="Search"
+            aria-label={t("shell.brand.search")}
             data-todo="search"
             onClick={() => {}}
-            className="hover:bg-zinc-800/50 transition-all duration-200 p-2 rounded"
+            className="hover:bg-zinc-800/50 transition-all duration-200 p-2 rounded focus-ring"
           >
             <span className="material-symbols-outlined text-zinc-400" data-icon="search">
               search
@@ -106,10 +109,10 @@ export function BrandTopBar({ className }: BrandTopBarProps) {
           </button>
           <button
             type="button"
-            aria-label="Notifications"
+            aria-label={t("shell.brand.notifications")}
             data-todo="notifications"
             onClick={() => {}}
-            className="hover:bg-zinc-800/50 transition-all duration-200 p-2 rounded"
+            className="hover:bg-zinc-800/50 transition-all duration-200 p-2 rounded focus-ring"
           >
             <span className="material-symbols-outlined text-zinc-400" data-icon="notifications">
               notifications
@@ -117,9 +120,9 @@ export function BrandTopBar({ className }: BrandTopBarProps) {
           </button>
           <button
             type="button"
-            aria-label="Settings"
+            aria-label={t("shell.brand.settings")}
             onClick={() => setSettingsDrawerOpen(true)}
-            className="hover:bg-zinc-800/50 transition-all duration-200 p-2 rounded"
+            className="hover:bg-zinc-800/50 transition-all duration-200 p-2 rounded focus-ring"
           >
             <span className="material-symbols-outlined text-zinc-400" data-icon="settings">
               settings

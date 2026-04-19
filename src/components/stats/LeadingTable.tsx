@@ -32,7 +32,7 @@
  * scroll-and-highlight (heatmap story 25) can target rows without being
  * coupled to this component's internals.
  */
-import { useMemo, useState } from "react"
+import { memo, useMemo, useState } from "react"
 
 import { useBreakpoint } from "@/hooks/useBreakpoint"
 import { useI18n } from "@/i18n/I18nContext"
@@ -190,7 +190,7 @@ function SortIndicator({
   )
 }
 
-export function LeadingTable() {
+export const LeadingTable = memo(function LeadingTable() {
   const stats = useLiveStore((s) => s.statistics)
   const snapshot = useLiveStore((s) => s.sessionMeta)
   const excluded = useFilterStore((s) => s.excludedStatsClasses)
@@ -335,7 +335,7 @@ export function LeadingTable() {
                   </button>
                 </th>
                 <th className="px-6 py-4" scope="col">
-                  #
+                  {t("col.num")}
                 </th>
                 <th className="px-6 py-4" scope="col">
                   {t("stats.leading.colDriverTeam")}
@@ -445,4 +445,4 @@ export function LeadingTable() {
       )}
     </section>
   )
-}
+})

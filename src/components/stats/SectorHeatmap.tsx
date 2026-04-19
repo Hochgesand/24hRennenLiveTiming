@@ -26,7 +26,7 @@
  * Both opacity-class records are listed literally so Tailwind 4's JIT detects
  * every token at build time (no dynamic class composition).
  */
-import { useMemo } from "react"
+import { memo, useMemo } from "react"
 
 import { useBreakpoint } from "@/hooks/useBreakpoint"
 import { useI18n } from "@/i18n/I18nContext"
@@ -106,7 +106,7 @@ function buildCellAria(
   return `${classLabel} S${sector}: ${time} · Δ ${dSec} (${dPct})`
 }
 
-export function SectorHeatmap() {
+export const SectorHeatmap = memo(function SectorHeatmap() {
   const stats = useLiveStore((s) => s.statistics)
   const excluded = useFilterStore((s) => s.excludedStatsClasses)
   const { t } = useI18n()
@@ -318,4 +318,4 @@ export function SectorHeatmap() {
       )}
     </section>
   )
-}
+})

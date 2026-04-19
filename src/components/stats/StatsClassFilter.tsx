@@ -18,7 +18,7 @@
  * Out of scope (deferred to follow-up stories):
  *   - Wiring chart / heatmap / leading table to read this slice
  */
-import { useMemo } from "react"
+import { memo, useMemo } from "react"
 
 import { useI18n } from "@/i18n/I18nContext"
 import { availableStatClasses } from "@/lib/statistics"
@@ -32,7 +32,7 @@ const CHIP_INACTIVE = `${CHIP_BASE} bg-surface-container-low text-zinc-400 hover
 
 const CHIP_EXCLUDED = `${CHIP_BASE} bg-primary-container/20 text-primary line-through opacity-60`
 
-export function StatsClassFilter() {
+export const StatsClassFilter = memo(function StatsClassFilter() {
   const stats = useLiveStore((s) => s.statistics)
   const excluded = useFilterStore((s) => s.excludedStatsClasses)
   const toggle = useFilterStore((s) => s.toggleExcludedStatsClass)
@@ -90,4 +90,4 @@ export function StatsClassFilter() {
       </div>
     </section>
   )
-}
+})

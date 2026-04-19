@@ -8,11 +8,8 @@ import { I18nProvider } from "@/i18n/I18nContext"
 import { useLiveConnection } from "@/hooks/useLiveConnection"
 import { useSyncFiltersFromUrl } from "@/hooks/useSyncFiltersFromUrl"
 import { useUrlConfig } from "@/hooks/useUrlConfig"
+import { isEventNotFoundError } from "@/lib/connectionError"
 import { useLiveStore } from "@/store/useLiveStore"
-
-function isEventNotFoundError(error: string | null): boolean {
-  return error !== null && error.trim().toLowerCase() === "event not found"
-}
 
 export default function App() {
   const { lang } = useUrlConfig()

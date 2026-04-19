@@ -44,7 +44,7 @@
  * Out of scope (deferred to follow-up stories under §"Best-lap-per-class"):
  *   - The 60/40 grid wrapper with the heatmap (lands with the heatmap stories)
  */
-import { useMemo, useState } from "react"
+import { memo, useMemo, useState } from "react"
 
 import { useBreakpoint } from "@/hooks/useBreakpoint"
 import { useI18n } from "@/i18n/I18nContext"
@@ -83,7 +83,7 @@ function buildTooltipText(row: BestLapByClassRow): string {
   return parts.join(" · ")
 }
 
-export function BestLapPerClassChart() {
+export const BestLapPerClassChart = memo(function BestLapPerClassChart() {
   const stats = useLiveStore((s) => s.statistics)
   const snapshot = useLiveStore((s) => s.sessionMeta)
   const excluded = useFilterStore((s) => s.excludedStatsClasses)
@@ -128,11 +128,31 @@ export function BestLapPerClassChart() {
                 title={tooltipText}
                 aria-label={tooltipText}
               >
-                <div className="flex justify-between items-baseline">
-                  <span className="text-[10px] uppercase font-bold tracking-widest text-on-surface">
-                    {row.classLabel}
-                  </span>
-                  <span className="font-mono tabular-nums text-xs lg:text-sm font-bold text-on-surface">
+                <div className="flex min-w-0 justify-between items-baseline gap-2">
+                  <div className="min-w-0 flex-1 truncate text-[10px] leading-tight">
+                    <span className="uppercase font-bold tracking-widest text-on-surface">
+                      {row.classLabel}
+                    </span>
+                    <span className="text-on-surface/60" aria-hidden>
+                      {" "}
+                      ·{" "}
+                    </span>
+                    <span className="font-mono tabular-nums text-zinc-400 text-xs">
+                      #{row.carNumber}
+                    </span>
+                    {row.driverTeam ? (
+                      <>
+                        <span className="text-on-surface/60" aria-hidden>
+                          {" "}
+                          ·{" "}
+                        </span>
+                        <span className="text-on-surface">{row.driverTeam}</span>
+                      </>
+                    ) : null}
+                  </div>
+                  {/* Explicit space so textContent / SR don't glue #NR to lap time */}
+                  {" "}
+                  <span className="shrink-0 font-mono tabular-nums text-xs lg:text-sm font-bold text-on-surface">
                     {row.display}
                   </span>
                 </div>
@@ -156,11 +176,11 @@ export function BestLapPerClassChart() {
           type="button"
           onClick={() => setExpanded(true)}
           data-testid="best-lap-expand"
-          className="w-full py-3 text-[10px] font-bold uppercase tracking-widest text-primary-container hover:bg-primary-container/5 transition-colors"
+          className="w-full py-3 text-[10px] font-bold uppercase tracking-widest text-primary-container hover:bg-primary-container/5 transition-colors focus-ring"
         >
           {t("stats.bestLap.expand")}
         </button>
       ) : null}
     </section>
   )
-}
+})

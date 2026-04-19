@@ -177,6 +177,54 @@ describe("BestLapPerClassChart", () => {
     expect(title.endsWith("12:34:56")).toBe(true)
   })
 
+  it("shows visible #NR and driverTeam inline when sessionMeta matches STNR", () => {
+    useLiveStore.setState({
+      ...initialLive,
+      statistics: {
+        PID: "9002",
+        BESTLAPS: [
+          { CLASS: "SP-Pro", NR: "911", LAPTIME: "7:54.218" },
+          { CLASS: "Cup3", NR: "55", LAPTIME: "7:59.001" },
+        ],
+      } as unknown as Pid9002Frame,
+      sessionMeta: {
+        PID: "0",
+        RESULT: [
+          { STNR: "911", NAME: "Max Mustermann", TEAM: "Manthey EMA" },
+          { STNR: "55", NAME: "Jane Doe", TEAM: "Cup Team" },
+        ],
+      } as unknown as Pid0Frame,
+    })
+
+    const { container } = render(<BestLapPerClassChart />)
+    const items = container.querySelectorAll("li")
+    expect(items).toHaveLength(2)
+    const firstRow = items[0]!
+    expect(firstRow.textContent).toContain("#911")
+    expect(firstRow.textContent).toContain("Max Mustermann · Manthey EMA")
+    const secondRow = items[1]!
+    expect(secondRow.textContent).toContain("#55")
+    expect(secondRow.textContent).toContain("Jane Doe · Cup Team")
+  })
+
+  it("shows only class and #NR inline when driverTeam is null (no RESULT match)", () => {
+    useLiveStore.setState({
+      ...initialLive,
+      statistics: {
+        PID: "9002",
+        BESTLAPS: [{ CLASS: "SP-Pro", NR: "911", LAPTIME: "7:54.218" }],
+      } as unknown as Pid9002Frame,
+      sessionMeta: null,
+    })
+
+    const { container } = render(<BestLapPerClassChart />)
+    const li = container.querySelector("li")!
+    expect(li.textContent).toContain("SP-Pro")
+    expect(li.textContent).toContain("#911")
+    expect(li.textContent).toContain("7:54.218")
+    expect(li.textContent).not.toContain("Mustermann")
+  })
+
   it("renders identical `title` and `aria-label` on each row's <li>", () => {
     useLiveStore.setState({
       ...initialLive,
@@ -276,7 +324,7 @@ describe("BestLapPerClassChart", () => {
 
       const { container } = render(<BestLapPerClassChart />)
       const monoCells = Array.from(
-        container.querySelectorAll<HTMLSpanElement>("span.font-mono")
+        container.querySelectorAll<HTMLSpanElement>("span.font-mono.font-bold")
       ).map((el) => el.textContent)
       expect(monoCells).toEqual([
         "7:50.000",
