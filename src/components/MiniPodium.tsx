@@ -39,7 +39,7 @@ function ChgMini({ row }: { row: RawResultRow }) {
     <span
       className={cn(
         "inline-flex items-center gap-0.5 text-[10px] font-medium tabular-nums",
-        up ? "text-[#9ddf2e]" : "text-[#fb7185]"
+        up ? "text-[var(--chg-positive)]" : "text-[var(--chg-negative)]"
       )}
     >
       {up ? <ArrowUp className="size-2.5" aria-hidden /> : <ArrowDown className="size-2.5" aria-hidden />}
@@ -53,7 +53,7 @@ function MiniCard({ row, place }: { row: RawResultRow; place: 1 | 2 | 3 }) {
   return (
     <div
       className={cn(
-        "w-[8.5rem] shrink-0 rounded-lg border border-white/[0.08] bg-[#1c2025] px-2 py-2",
+        "border-border bg-card w-[8.5rem] shrink-0 rounded-lg border px-2 py-2",
         place === 1 && "border-amber-400/35"
       )}
     >

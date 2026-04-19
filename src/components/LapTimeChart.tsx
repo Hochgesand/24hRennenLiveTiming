@@ -17,10 +17,10 @@ import {
   resolveAverageSeconds,
 } from "@/lib/lapTimes"
 
-const PB_STROKE = "#059669"
-const AVG_STROKE = "#64748b"
-/** Theme chart color (defined in `index.css` as `--chart-1`). */
-const LINE_STROKE = "var(--chart-1)"
+const PB_STROKE = "var(--stitch-secondary-container)"
+const AVG_STROKE = "var(--stitch-on-surface-variant)"
+/** Stitch primary light / telemetry line */
+const LINE_STROKE = "var(--stitch-primary)"
 
 type LapTimeChartProps = {
   points: LapChartPoint[]

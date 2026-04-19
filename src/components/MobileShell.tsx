@@ -102,7 +102,7 @@ export function MobileShell() {
       </div>
 
       <nav
-        className="border-border bg-[#101419]/95 fixed right-0 bottom-0 left-0 z-40 flex border-t backdrop-blur-md"
+        className="border-border bg-[color-mix(in_srgb,var(--stitch-surface-container-lowest)_95%,transparent)] fixed right-0 bottom-0 left-0 z-40 flex border-t backdrop-blur-md"
         aria-label="Primary"
       >
         {barBtn("leaderboard", <Flag className="size-4" />, t("mobile.race"))}

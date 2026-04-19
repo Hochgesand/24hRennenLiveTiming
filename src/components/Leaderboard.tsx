@@ -72,7 +72,7 @@ function PositionChgVisual({ chg }: { chg: number | null }) {
     <span
       className={cn(
         "inline-flex items-center gap-0.5 text-xs font-medium tabular-nums",
-        up ? "text-[#9ddf2e]" : "text-[#fb7185]"
+        up ? "text-[var(--chg-positive)]" : "text-[var(--chg-negative)]"
       )}
     >
       {up ? <ArrowUp className="size-3.5 shrink-0" aria-hidden /> : <ArrowDown className="size-3.5 shrink-0" aria-hidden />}
@@ -109,7 +109,7 @@ export function Leaderboard() {
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
       <LeaderboardFilters sourceRows={sorted} maxSectors={maxSectors} />
-      <div className="overflow-auto rounded-xl border border-white/[0.08] bg-[#1c2025]">
+      <div className="border-border bg-card overflow-auto rounded-xl border">
         <table className="w-full text-sm">
           <thead className="bg-muted/95 sticky top-0 z-10 backdrop-blur">
             <tr className="text-muted-foreground border-b text-left">

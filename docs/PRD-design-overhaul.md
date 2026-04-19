@@ -47,154 +47,192 @@ primary UI language, English available via in-code i18n.
 
 ## User Stories
 
+> **Tracking:** Erledigte Stories sind als ~~durchgestrichener Originaltext~~ markiert, offene mit **[offen]** oder Checkbox `- [ ]`. Stand: 2026-04-19.
+
 ### Shell, header, and navigation
 
-1. As a desktop spectator, I want the event title, session timer, track state
+~~1. As a desktop spectator, I want the event title, session timer, track state
    and WebSocket connection dot to stay visible no matter which tab I am on,
-   so that I never lose the broadcast context.
-2. As a desktop spectator, I want a slim podium ribbon (top 3) pinned under the
+   so that I never lose the broadcast context.~~ — `DashboardShell` / `SessionHeader` außerhalb der Tabs.
+
+~~2. As a desktop spectator, I want a slim podium ribbon (top 3) pinned under the
    header on every tab, so that I can keep an eye on the leaders while reading
-   stats or messages.
-3. As a desktop spectator, I want primary navigation as tabs
+   stats or messages.~~ — `PodiumRibbon`.
+
+~~3. As a desktop spectator, I want primary navigation as tabs
    (Leaderboard / Stats / Messages / Track Map / STQ?), so that I can switch
-   views with a single click and without losing the header.
-4. As a desktop user, I want the STQ (Top Qualifying) tab to appear only when
+   views with a single click and without losing the header.~~ — `DashboardShell` + `?tab=`.
+
+~~4. As a desktop user, I want the STQ (Top Qualifying) tab to appear only when
    the active session actually has STQ data, so that I am not confused by an
-   empty tab during a race.
-5. As a tablet user (portrait 1024×1366), I want the same tab pattern as on
+   empty tab during a race.~~ — Tab nur bei `sessionMeta?.STQ`.
+
+~~5. As a tablet user (portrait 1024×1366), I want the same tab pattern as on
    desktop with denser cells, so that I do not have to learn a different mental
-   model on my iPad.
-6. As a tablet user, I want the podium ribbon to collapse into a 2-row carousel
-   after the first scroll, so that more leaderboard fits above the fold.
-7. As a mobile user, I want a fixed bottom tab bar (Race / Stats / Messages /
-   Settings), so that I can reach all primary views with one thumb.
-8. As a mobile user, I want a compact session bar at the top showing only the
+   model on my iPad.~~ — Tablet nutzt `DashboardShell` (gleiche Tabs).
+
+~~6. As a tablet user, I want the podium ribbon to collapse into a 2-row carousel
+   after the first scroll, so that more leaderboard fits above the fold.~~ — `PodiumRibbon` + Scroll im Tab-Panel (`twoRowCompact` bei Tablet).
+
+~~7. As a mobile user, I want a fixed bottom tab bar (Race / Stats / Messages /
+   Settings), so that I can reach all primary views with one thumb.~~ — `MobileShell`.
+
+~~8. As a mobile user, I want a compact session bar at the top showing only the
    essentials (timer, flag, WS dot), so that the tiny screen is not wasted on
-   chrome.
-9. As a mobile user, I want a horizontally scrollable mini-podium under the
-   session bar, so that I can swipe through P1–P3 without leaving the Race tab.
-10. As a mobile user, I want the bottom tab bar to respect
+   chrome.~~ — `SessionHeader compact`.
+
+~~9. As a mobile user, I want a horizontally scrollable mini-podium under the
+   session bar, so that I can swipe through P1–P3 without leaving the Race tab.~~ — `MiniPodium`.
+
+~~10. As a mobile user, I want the bottom tab bar to respect
     `env(safe-area-inset-bottom)`, so that it does not collide with the iOS
-    home indicator.
+    home indicator.~~ — `pb-[calc(3.5rem+env(safe-area-inset-bottom,0px))]` + fixed `nav`.
 
 ### Leaderboard, columns, and filters
 
-11. As a spectator, I want a default leaderboard column set
+~~11. As a spectator, I want a default leaderboard column set
     (Pos · # · Class chip · Driver+Team stack · Gap · Last · Fastest · S1..Sn),
-    so that the most-scanned data is visible without me configuring anything.
-12. As a power user, I want a column picker exposing the hidden columns
+    so that the most-scanned data is visible without me configuring anything.~~ — Defaults in `leaderboardColumns` / `urlFilters`; Team unter Fahrer wenn ausgeblendet.
+
+~~12. As a power user, I want a column picker exposing the hidden columns
     (Car/manufacturer · Pit count · Stint length · Tire compound · Best of
-    class), so that I can tailor the table to my use-case.
-13. As a power user, I want my column choices serialised into the URL via a
-    `cols=` parameter, so that I can share my exact view as a link.
-14. As a desktop spectator, I want filters and columns inside a right-side
+    class), so that I can tailor the table to my use-case.~~ — `LeaderboardFilters` + optionale Spalten.
+
+~~13. As a power user, I want my column choices serialised into the URL via a
+    `cols=` parameter, so that I can share my exact view as a link.~~ — `PARAM_COLS` / `applyFilterStateToSearchParams`.
+
+~~14. As a desktop spectator, I want filters and columns inside a right-side
     drawer triggered by a gear icon in the header, so that the leaderboard
-    stays full-bleed when I am not configuring anything.
-15. As a tablet user, I want the same drawer behaviour, so that filtering does
-    not steal vertical space from the table.
-16. As a mobile user, I want filters and columns inside the Settings tab
+    stays full-bleed when I am not configuring anything.~~ — `SettingsDrawer` + Zahnrad in `SessionHeader`.
+
+~~15. As a tablet user, I want the same drawer behaviour, so that filtering does
+    not steal vertical space from the table.~~ — gleiche Shell wie Desktop.
+
+~~16. As a mobile user, I want filters and columns inside the Settings tab
     instead of a drawer, so that I am not fighting with a side panel on a
-    small screen.
-17. As a spectator, I want the existing class and Pro/Am filters to keep
-    working through this UI change, so that nothing regresses.
-18. As a spectator, I want sector cells to retain their color coding
+    small screen.~~ — `SettingsPanel` im `MobileShell`-Tab Settings.
+
+~~17. As a spectator, I want the existing class and Pro/Am filters to keep
+    working through this UI change, so that nothing regresses.~~ — `LeaderboardFilters` / Store.
+
+~~18. As a spectator, I want sector cells to retain their color coding
     (session-best · personal-best · overall-best · pit · in-lap · out-lap ·
     invalid · normal) under the new design tokens, so that hot spots remain
-    instantly recognisable.
+    instantly recognisable.~~ — `decodeLapStatus` + `SectorCell` + CSS-Variablen.
 
 ### Drilldown
 
-19. As a desktop analyst, I want the car drilldown to open as a centered modal,
-    so that the leaderboard context stays partially visible behind it.
-20. As a tablet/mobile analyst, I want the drilldown to open as a bottom sheet
-    (80 %/90 % height), so that the gesture matches the platform convention.
-21. As an analyst, I want the drilldown header to show car number, class chip,
+~~19. As a desktop analyst, I want the car drilldown to open as a centered modal,
+    so that the leaderboard context stays partially visible behind it.~~ — `CarDrilldownDialog` / `useBreakpoint`.
+
+~~20. As a tablet/mobile analyst, I want the drilldown to open as a bottom sheet
+    (80 %/90 % height), so that the gesture matches the platform convention.~~ — Bottom-Sheet-Klassen am `DialogContent`.
+
+~~21. As an analyst, I want the drilldown header to show car number, class chip,
     manufacturer logo, team, and the rotating driver line-up, so that I can
-    identify the entry without looking elsewhere.
-22. As an analyst, I want a KPI strip with position, gap, laps, best lap,
+    identify the entry without looking elsewhere.~~ — `DrilldownHeader`: Klasse, Team, Monogramm statt OEM-Logo, Fahrerliste (Wire oder NAME-Split).
+
+~~22. As an analyst, I want a KPI strip with position, gap, laps, best lap,
     last lap, average lap, and stint count, so that I can summarise the entry
-    in one glance.
-23. As an analyst, I want a lap-time line chart with personal-best and
-    stint-average reference lines, so that I can place each lap in context.
-24. As an analyst, I want a sector matrix (laps × S1..Sn) coloured by status,
-    so that I can locate where a fast or slow lap was won or lost.
-25. As an analyst, I want a driver-stint timeline (horizontal bars showing
+    in one glance.~~ — `KpiStrip`.
+
+~~23. As an analyst, I want a lap-time line chart with personal-best and
+    stint-average reference lines, so that I can place each lap in context.~~ — `LapTimeChart`.
+
+~~24. As an analyst, I want a sector matrix (laps × S1..Sn) coloured by status,
+    so that I can locate where a fast or slow lap was won or lost.~~ — `LapSectorMatrix`.
+
+~~25. As an analyst, I want a driver-stint timeline (horizontal bars showing
     which laps each driver drove), so that I can correlate pace changes with
-    driver changes.
-26. As an analyst, I want a compare-to-leader area chart of running gap, so
-    that I can see whether the entry is gaining or losing ground.
-27. As an analyst, I want a reserved telemetry placeholder block, so that the
-    layout is forward-compatible with the planned telemetry feature.
+    driver changes.~~ — `DriverStintTimeline` / `stintFromLaps`.
+
+~~26. As an analyst, I want a compare-to-leader area chart of running gap, so
+    that I can see whether the entry is gaining or losing ground.~~ — `LeaderDeltaChart` + Leader-Laps-Query.
+
+~~27. As an analyst, I want a reserved telemetry placeholder block, so that the
+    layout is forward-compatible with the planned telemetry feature.~~ — `TelemetryPlaceholder`.
 
 ### Track map (new)
 
-28. As a spectator, I want a "Track Map" tab on desktop and tablet showing a
+~~28. As a spectator, I want a "Track Map" tab on desktop and tablet showing a
     schematic of the Nürburgring (Nordschleife + GP combination) with each
     sector colour-heated by current status, so that I can see where the
-    fast/slow zones of the lap actually are.
-29. As a mobile user, I want the existing Interactive Track Map screen to be
+    fast/slow zones of the lap actually are.~~ — `TrackMapPanel` Tab.
+
+~~29. As a mobile user, I want the existing Interactive Track Map screen to be
     accessible from the Stats tab on mobile, so that I do not lose this view
-    on a small screen.
+    on a small screen.~~ — `TrackMapPanel` unter Stats in `MobileShell`.
 
 ### State, errors, and i18n
 
-30. As a spectator, I want a clear, German empty-state on
+~~30. As a spectator, I want a clear, German empty-state on
     `LTS_NOT_FOUND` ("Veranstaltung nicht gefunden"), so that I know the URL is
-    wrong rather than the dashboard being broken.
-31. As a spectator, I want a reconnecting banner during exponential-backoff,
-    so that I know data is stale and recovering.
-32. As a spectator, I want a connection-status dot in the header that maps to
+    wrong rather than the dashboard being broken.~~ — `EventNotFoundOverlay`.
+
+~~31. As a spectator, I want a reconnecting banner during exponential-backoff,
+    so that I know data is stale and recovering.~~ — `ConnectionBanner`.
+
+~~32. As a spectator, I want a connection-status dot in the header that maps to
     `connecting / open / reconnecting / closed / error`, so that I can read WS
-    health at a glance.
-33. As a German broadcast viewer, I want all UI labels in German by default,
-    so that the dashboard matches the event language.
-34. As an international viewer, I want a language toggle (DE / EN) in the
-    Settings drawer/view, so that I can switch the UI to English.
-35. As a spectator, I want the language choice to persist in the URL, so that
-    I can share an English-language view with a non-German friend.
+    health at a glance.~~ — `SessionHeader` + `reconnecting` im Store.
+
+~~33. As a German broadcast viewer, I want all UI labels in German by default,
+    so that the dashboard matches the event language.~~ — `I18nProvider` default `de`.
+
+~~34. As an international viewer, I want a language toggle (DE / EN) in the
+    Settings drawer/view, so that I can switch the UI to English.~~ — `SettingsPanel`.
+
+~~35. As a spectator, I want the language choice to persist in the URL, so that
+    I can share an English-language view with a non-German friend.~~ — `?lang=en` / `setUrlLang`.
 
 ### Numeric formatting
 
-36. As a spectator, I want all numeric data (lap times, gaps, sectors,
+~~36. As a spectator, I want all numeric data (lap times, gaps, sectors,
     deltas) rendered in a tabular monospace font with consistent decimal
     alignment, so that values are easy to compare row-to-row without visual
-    jitter.
-37. As a spectator, I want positive deltas in red and negative deltas in
-    green, so that I can read direction at a glance.
-38. As a spectator, I want lap-time values to keep three decimals and gaps to
+    jitter.~~ — `DataNumeric` / `formatNumeric`.
+
+~~37. As a spectator, I want positive deltas in red and negative deltas in
+    green, so that I can read direction at a glance.~~ — `--delta-worse` / `--delta-better`.
+
+~~38. As a spectator, I want lap-time values to keep three decimals and gaps to
     keep one decimal up to ±99.9 s, switching to lap notation beyond, so that
-    formatting is consistent with motorsport conventions.
+    formatting is consistent with motorsport conventions.~~ — `formatNumeric` / `formatGapSeconds`.
 
 ### Design system + design tokens
 
-39. As a frontend developer, I want the Stitch named colors materialised as
+~~39. As a frontend developer, I want the Stitch named colors materialised as
     CSS custom properties in `src/index.css` and bound to shadcn's CSS
     variables, so that the existing shadcn components inherit the new theme
-    without per-component edits.
-40. As a frontend developer, I want JetBrains Mono loaded via a `<link>` in
+    without per-component edits.~~ — Telemetric Cockpit in `index.css`.
+
+~~40. As a frontend developer, I want JetBrains Mono loaded via a `<link>` in
     `index.html` and exposed as a Tailwind `font-mono` family, so that the
-    `<DataNumeric>` primitive renders correctly without custom CSS.
-41. As a frontend developer, I want a single `useBreakpoint()` hook returning
+    `<DataNumeric>` primitive renders correctly without custom CSS.~~ — `index.html` + `@theme` `--font-mono`.
+
+~~41. As a frontend developer, I want a single `useBreakpoint()` hook returning
     `'mobile' | 'tablet' | 'desktop'`, so that no component has to repeat
-    matchMedia logic.
+    matchMedia logic.~~ — `hooks/useBreakpoint.ts`.
 
 ### Settings + sharing
 
-42. As a power user, I want the Settings drawer/view to expose: class filter,
+~~42. As a power user, I want the Settings drawer/view to expose: class filter,
     Pro/Am filter, column picker, language toggle, event id input, and a
-    "copy share URL" button, so that all configuration lives in one place.
-43. As a power user, I want the share URL to encode event id, config, active
+    "copy share URL" button, so that all configuration lives in one place.~~ — `SettingsPanel`.
+
+~~43. As a power user, I want the share URL to encode event id, config, active
     tab, language, class filter, and column choice, so that a shared link
-    reproduces my exact view.
+    reproduces my exact view.~~ — `window.location.href` inkl. Query-Params (`event`, `config`, `tab`, `lang`, Filter, `cols`).
 
 ### Performance + acceptance
 
-44. As an operator, I want desktop and mobile builds to score ≥ 90 in
+- [ ] **44.** As an operator, I want desktop and mobile builds to score ≥ 90 in
     Lighthouse performance, so that the dashboard remains snappy on broadcast
-    laptops and on phones over LTE.
-45. As an operator, I want the dashboard to remain a static, zero-backend SPA
+    laptops and on phones over LTE. **[offen]** — Audit in CI / lokal noch nicht fest verdrahtet.
+
+~~45. As an operator, I want the dashboard to remain a static, zero-backend SPA
     after the redesign, so that I can keep deploying it to a CDN / GitHub
-    Pages.
+    Pages.~~ — unverändert reine Vite-SPA.
 
 ## Implementation Decisions
 

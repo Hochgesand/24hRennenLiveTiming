@@ -32,8 +32,9 @@ function connectionUi(
       }
     case "connected":
       return {
-        dotClass: "bg-[#22d3ee] shadow-[0_0_10px_rgba(34,211,238,0.45)]",
-        labelClass: "text-[#a5f3fc]",
+        dotClass:
+          "bg-[var(--stitch-secondary)] shadow-[0_0_12px_color-mix(in_srgb,var(--stitch-secondary)_40%,transparent)]",
+        labelClass: "text-[var(--stitch-secondary)]",
         label: t("conn.connected"),
       }
     case "error":
@@ -174,7 +175,7 @@ export function SessionHeader({ compact = false }: { compact?: boolean }) {
   const showWsLabel = compact ? connection.reconnecting || connection.status !== "connected" : true
 
   return (
-    <header className="flex min-h-14 flex-col justify-center gap-2 border-b border-white/[0.08] bg-[#101419] px-4 py-3">
+    <header className="border-border bg-[var(--stitch-surface-container-lowest)] flex min-h-14 flex-col justify-center gap-2 border-b px-4 py-3">
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
           {missingEvent ? (
@@ -193,7 +194,7 @@ export function SessionHeader({ compact = false }: { compact?: boolean }) {
             <>
               <div
                 className={cn(
-                  "font-display font-semibold leading-tight tracking-tight text-[#e0e2ea]",
+                  "font-display text-foreground font-semibold leading-tight tracking-tight",
                   compact ? "line-clamp-2 text-sm" : "text-xl"
                 )}
               >

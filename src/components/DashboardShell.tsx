@@ -71,7 +71,7 @@ export function DashboardShell() {
       <SessionHeader />
       <ConnectionBanner />
       <PodiumRibbon twoRowCompact={podiumTwoRow} />
-      <main className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 bg-[#181c21]/80 p-4">
+      <main className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 bg-[color-mix(in_srgb,var(--stitch-surface-container-low)_92%,transparent)] p-4">
         <Tabs
           value={displayTab}
           onValueChange={onTabChange}
