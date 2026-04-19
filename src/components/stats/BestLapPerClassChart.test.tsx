@@ -158,7 +158,7 @@ describe("BestLapPerClassChart", () => {
     expect(title).toContain("Max Mustermann · Manthey EMA")
   })
 
-  it("omits the trailing ` · driverTeam` fragment when no RESULT match exists", () => {
+  it("omits the trailing driverTeam fragment from the tooltip when no RESULT match exists", () => {
     useLiveStore.setState({
       ...initialLive,
       statistics: {
@@ -173,8 +173,12 @@ describe("BestLapPerClassChart", () => {
     const { container } = render(<BestLapPerClassChart />)
     const li = container.querySelector("li")!
     const title = li.getAttribute("title")!
-    expect(title).toBe("SP-Pro · #911 · 7:54.218 · 12:34:56")
-    expect(title.endsWith("12:34:56")).toBe(true)
+    expect(title).toContain("SP-Pro")
+    expect(title).toContain("#911")
+    expect(title).toContain("7:54.218")
+    expect(title).toContain("12:34:56")
+    expect(title).not.toContain("Mustermann")
+    expect(title).not.toMatch(/· *$/)
   })
 
   it("shows visible #NR and driverTeam inline when sessionMeta matches STNR", () => {
@@ -364,6 +368,94 @@ describe("BestLapPerClassChart", () => {
       expect(
         screen.queryByText("Beste Runde pro Klasse — Top 5")
       ).toBeNull()
+    })
+  })
+
+  describe("dimension tabs (Klasse / Auto / Team)", () => {
+    beforeEach(() => {
+      useLiveStore.setState({
+        ...initialLive,
+        statistics: {
+          PID: "9002",
+          BESTLAPS: [
+            { CLASS: "SP9", NR: "3", LAPTIME: "8:10.453" },
+            { CLASS: "SP9", NR: "3", LAPTIME: "8:14.000" },
+            { CLASS: "SP9", NR: "84", LAPTIME: "8:17.419" },
+            { CLASS: "SP-X", NR: "81", LAPTIME: "8:18.620" },
+          ],
+        } as unknown as Pid9002Frame,
+        sessionMeta: {
+          PID: "0",
+          RESULT: [
+            { STNR: "3", NAME: "Auer", TEAM: "Winward Racing" },
+            { STNR: "84", NAME: "Niederhauser", TEAM: "Red Bull Team ABT" },
+            { STNR: "81", NAME: "Verhagen", TEAM: "BMW M Motorsport" },
+          ],
+        } as unknown as Pid0Frame,
+      })
+    })
+
+    it("renders three tabs and the class tab is selected by default", () => {
+      render(<BestLapPerClassChart />)
+      const classTab = screen.getByTestId("best-lap-tab-class")
+      const carTab = screen.getByTestId("best-lap-tab-car")
+      const teamTab = screen.getByTestId("best-lap-tab-team")
+      expect(classTab.getAttribute("aria-selected")).toBe("true")
+      expect(carTab.getAttribute("aria-selected")).toBe("false")
+      expect(teamTab.getAttribute("aria-selected")).toBe("false")
+    })
+
+    it("class tab dedupes per class — 2 rows, fastest per class wins", () => {
+      const { container } = render(<BestLapPerClassChart />)
+      const items = container.querySelectorAll("li")
+      expect(items).toHaveLength(2)
+      expect(items[0]!.textContent).toContain("SP9")
+      expect(items[0]!.textContent).toContain("8:10.453")
+    })
+
+    it("switching to the Auto tab shows one row per car number with `#NR` primary label", () => {
+      const { container } = render(<BestLapPerClassChart />)
+      fireEvent.click(screen.getByTestId("best-lap-tab-car"))
+
+      expect(
+        container.querySelector(
+          '[data-testid="best-lap-per-class-chart"]'
+        )!.getAttribute("data-dimension")
+      ).toBe("car")
+      const items = container.querySelectorAll("li")
+      expect(items).toHaveLength(3)
+      expect(items[0]!.textContent).toContain("#3")
+      expect(items[0]!.textContent).toContain("Auer · Winward Racing")
+      expect(items[1]!.textContent).toContain("#84")
+      expect(items[2]!.textContent).toContain("#81")
+      expect(screen.getByText("Beste Runde pro Auto")).toBeTruthy()
+    })
+
+    it("switching to the Team tab shows one row per team name", () => {
+      const { container } = render(<BestLapPerClassChart />)
+      fireEvent.click(screen.getByTestId("best-lap-tab-team"))
+
+      const items = container.querySelectorAll("li")
+      expect(items).toHaveLength(3)
+      expect(items[0]!.textContent).toContain("Winward Racing")
+      expect(items[0]!.textContent).toContain("#3")
+      expect(items[0]!.textContent).toContain("Auer")
+      expect(screen.getByText("Beste Runde pro Team")).toBeTruthy()
+    })
+
+    it("Team tab shows the team-specific empty message when sessionMeta is null", () => {
+      useLiveStore.setState({
+        ...initialLive,
+        statistics: {
+          PID: "9002",
+          BESTLAPS: [{ CLASS: "SP9", NR: "3", LAPTIME: "8:10.453" }],
+        } as unknown as Pid9002Frame,
+        sessionMeta: null,
+      })
+
+      render(<BestLapPerClassChart />)
+      fireEvent.click(screen.getByTestId("best-lap-tab-team"))
+      expect(screen.getByText("Keine Team-Daten verfügbar")).toBeTruthy()
     })
   })
 

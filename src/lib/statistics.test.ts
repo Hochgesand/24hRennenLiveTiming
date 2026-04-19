@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest"
 
 import {
   availableStatClasses,
+  bestLapsByCar,
   bestLapsByClass,
+  bestLapsByTeam,
   classKpis,
   composeDriverTeam,
   enrichedLeading,
@@ -596,6 +598,167 @@ describe("bestLapsByClass — driverTeam join", () => {
     })
     const rows = bestLapsByClass(statsWithSpace, new Set(), snap)
     expect(rows[0]!.driverTeam).toBe("Max Mustermann · Manthey EMA")
+  })
+
+  it("populates primaryLabel=classLabel and detailText=`#NR · driverTeam`", () => {
+    const stats = frame({
+      BESTLAPS: [{ CLASS: "SP9", NR: "911", LAPTIME: "7:54.218" }],
+    })
+    const snap = snapshot([
+      { STNR: "911", NAME: "Max Mustermann", TEAM: "Manthey EMA" },
+    ])
+    const [row] = bestLapsByClass(stats, new Set(), snap)
+    expect(row!.primaryLabel).toBe("SP9")
+    expect(row!.detailText).toBe("#911 · Max Mustermann · Manthey EMA")
+  })
+
+  it("detailText falls back to just `#NR` when no RESULT match exists", () => {
+    const stats = frame({
+      BESTLAPS: [{ CLASS: "SP9", NR: "911", LAPTIME: "7:54.218" }],
+    })
+    const [row] = bestLapsByClass(stats)
+    expect(row!.detailText).toBe("#911")
+  })
+})
+
+describe("bestLapsByCar", () => {
+  it("returns [] for null / empty BESTLAPS", () => {
+    expect(bestLapsByCar(null)).toEqual([])
+    expect(bestLapsByCar(frame({ BESTLAPS: [] }))).toEqual([])
+  })
+
+  it("dedupes per car, keeping only the fastest lap per #NR", () => {
+    const stats = frame({
+      BESTLAPS: [
+        { CLASS: "SP9", NR: "3", LAPTIME: "8:17.477" },
+        { CLASS: "SP9", NR: "3", LAPTIME: "8:10.453" },
+        { CLASS: "SP9", NR: "3", LAPTIME: "8:14.000" },
+        { CLASS: "SP9", NR: "84", LAPTIME: "8:17.419" },
+        { CLASS: "SP-X", NR: "81", LAPTIME: "8:18.620" },
+      ],
+    })
+
+    const rows = bestLapsByCar(stats)
+    expect(rows).toHaveLength(3)
+    expect(rows.map((r) => r.carNumber)).toEqual(["3", "84", "81"])
+    expect(rows[0]!.display).toBe("8:10.453")
+    expect(rows.map((r) => r.rank)).toEqual([1, 2, 3])
+    expect(rows[0]!.opacityStop).toBe(100)
+    expect(rows[0]!.widthPct).toBe(100)
+  })
+
+  it("uses primaryLabel=`#NR` and detailText=`class · driverTeam`", () => {
+    const stats = frame({
+      BESTLAPS: [{ CLASS: "SP9", NR: "3", LAPTIME: "8:10.453" }],
+    })
+    const snap = snapshot([
+      { STNR: "3", NAME: "Auer", TEAM: "Winward Racing" },
+    ])
+    const [row] = bestLapsByCar(stats, new Set(), snap)
+    expect(row!.primaryLabel).toBe("#3")
+    expect(row!.detailText).toBe("SP9 · Auer · Winward Racing")
+  })
+
+  it("detailText shows just the class when there is no RESULT match", () => {
+    const stats = frame({
+      BESTLAPS: [{ CLASS: "SP9", NR: "3", LAPTIME: "8:10.453" }],
+    })
+    const [row] = bestLapsByCar(stats)
+    expect(row!.detailText).toBe("SP9")
+  })
+
+  it("respects the excludedStatsClasses filter", () => {
+    const stats = frame({
+      BESTLAPS: [
+        { CLASS: "SP9", NR: "3", LAPTIME: "8:10.453" },
+        { CLASS: "SP-X", NR: "81", LAPTIME: "8:18.620" },
+      ],
+    })
+    const rows = bestLapsByCar(stats, new Set(["SP-X"]))
+    expect(rows).toHaveLength(1)
+    expect(rows[0]!.carNumber).toBe("3")
+  })
+})
+
+describe("bestLapsByTeam", () => {
+  it("returns [] for null snapshot (no team names available to bucket by)", () => {
+    const stats = frame({
+      BESTLAPS: [{ CLASS: "SP9", NR: "3", LAPTIME: "8:10.453" }],
+    })
+    expect(bestLapsByTeam(stats)).toEqual([])
+    expect(bestLapsByTeam(stats, new Set(), null)).toEqual([])
+  })
+
+  it("dedupes per team, keeping the fastest lap across all cars of the team", () => {
+    const stats = frame({
+      BESTLAPS: [
+        { CLASS: "SP-X", NR: "81", LAPTIME: "8:18.620" },
+        { CLASS: "SP-X", NR: "82", LAPTIME: "8:15.000" },
+        { CLASS: "SP9", NR: "3", LAPTIME: "8:10.453" },
+        { CLASS: "SP9", NR: "84", LAPTIME: "8:17.419" },
+      ],
+    })
+    const snap = snapshot([
+      { STNR: "81", NAME: "Verhagen", TEAM: "BMW M Motorsport" },
+      { STNR: "82", NAME: "Other Driver", TEAM: "BMW M Motorsport" },
+      { STNR: "3", NAME: "Auer", TEAM: "Winward Racing" },
+      { STNR: "84", NAME: "Niederhauser", TEAM: "Red Bull Team ABT" },
+    ])
+
+    const rows = bestLapsByTeam(stats, new Set(), snap)
+    expect(rows).toHaveLength(3)
+    expect(rows.map((r) => r.teamName)).toEqual([
+      "Winward Racing",
+      "BMW M Motorsport",
+      "Red Bull Team ABT",
+    ])
+    const bmw = rows.find((r) => r.teamName === "BMW M Motorsport")!
+    expect(bmw.display).toBe("8:15.000")
+    expect(bmw.carNumber).toBe("82")
+  })
+
+  it("uses primaryLabel=teamName and detailText=`#NR · class · driverName`", () => {
+    const stats = frame({
+      BESTLAPS: [{ CLASS: "SP9", NR: "3", LAPTIME: "8:10.453" }],
+    })
+    const snap = snapshot([
+      { STNR: "3", NAME: "Auer", TEAM: "Winward Racing" },
+    ])
+    const [row] = bestLapsByTeam(stats, new Set(), snap)
+    expect(row!.primaryLabel).toBe("Winward Racing")
+    expect(row!.detailText).toBe("#3 · SP9 · Auer")
+  })
+
+  it("drops cars whose RESULT row has no TEAM (cannot bucket by team)", () => {
+    const stats = frame({
+      BESTLAPS: [
+        { CLASS: "SP9", NR: "3", LAPTIME: "8:10.453" },
+        { CLASS: "SP9", NR: "84", LAPTIME: "8:17.419" },
+      ],
+    })
+    const snap = snapshot([
+      { STNR: "3", NAME: "Auer", TEAM: "Winward Racing" },
+      { STNR: "84", NAME: "Niederhauser" },
+    ])
+    const rows = bestLapsByTeam(stats, new Set(), snap)
+    expect(rows).toHaveLength(1)
+    expect(rows[0]!.teamName).toBe("Winward Racing")
+  })
+
+  it("respects the excludedStatsClasses filter", () => {
+    const stats = frame({
+      BESTLAPS: [
+        { CLASS: "SP9", NR: "3", LAPTIME: "8:10.453" },
+        { CLASS: "SP-X", NR: "81", LAPTIME: "8:18.620" },
+      ],
+    })
+    const snap = snapshot([
+      { STNR: "3", NAME: "Auer", TEAM: "Winward Racing" },
+      { STNR: "81", NAME: "Verhagen", TEAM: "BMW M Motorsport" },
+    ])
+    const rows = bestLapsByTeam(stats, new Set(["SP-X"]), snap)
+    expect(rows).toHaveLength(1)
+    expect(rows[0]!.teamName).toBe("Winward Racing")
   })
 })
 

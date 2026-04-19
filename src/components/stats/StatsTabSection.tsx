@@ -70,23 +70,14 @@ export function StatsTabSection({ bp }: StatsTabSectionProps) {
       ) : (
         <>
           <StatsClassFilter />
-          {bp === "mobile" ? (
-            <>
-              <BestLapPerClassChart />
-              <SectorHeatmap />
-            </>
-          ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-10 gap-6">
-              <div className="lg:col-span-6">
-                <BestLapPerClassChart />
-              </div>
-              <div className="lg:col-span-4">
-                <SectorHeatmap />
-              </div>
-            </div>
-          )}
+          {/* The bar chart now hosts class/car/team tabs internally and takes
+              full width. The sector heatmap moved to the bottom of the
+              section per Apr 2026 follow-up — heatmap is reference data that
+              users scroll to last. */}
+          <BestLapPerClassChart />
           <LeadingTable />
           <StatisticsPanel />
+          <SectorHeatmap />
         </>
       )}
     </div>

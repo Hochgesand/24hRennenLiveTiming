@@ -290,12 +290,49 @@ export type BestLapOpacityStop = 100 | 80 | 60 | 40 | 20
 /** Floor for the bar fill — slow rows still render a visible nub. */
 const MIN_BAR_WIDTH_PCT = 20
 
-/** One row of the best-lap-per-class bar chart, ready for the renderer. */
-export type BestLapByClassRow = {
-  /** Class label, e.g. "SP9". */
+/**
+ * One row of any "Beste Runde pro …" bar chart (class / car / team), ready
+ * for the renderer. The `primaryLabel` / `detailText` pair encodes which
+ * dimension this row was bucketed by, while the underlying fields
+ * (`classLabel`, `carNumber`, `driverName`, `teamName`, `driverTeam`) stay
+ * stable so consumers can still build their own header text or join more
+ * data.
+ */
+export type BestLapBarRow = {
+  /**
+   * Main label shown bold in the row header. Varies by dimension:
+   * - class: the class label (e.g. "SP9")
+   * - car:   `#NR`
+   * - team:  the team name
+   */
+  primaryLabel: string
+  /**
+   * Optional secondary text shown after the primary label (joined with " · ").
+   * Varies by dimension:
+   * - class: `#NR · driverTeam`
+   * - car:   `class · driverTeam`
+   * - team:  `#NR · class · driverName`
+   *
+   * `null` when the dimension carries no useful detail or every fragment was
+   * unavailable.
+   */
+  detailText: string | null
+  /** Class label, e.g. "SP9". Always present (rows without CLASS are dropped). */
   classLabel: string
   /** Car number string, trimmed; em-dash when missing. */
   carNumber: string
+  /** Driver name (RESULT.NAME, trimmed); `null` when no snapshot/match. */
+  driverName: string | null
+  /** Team name (RESULT.TEAM, trimmed); `null` when no snapshot/match. */
+  teamName: string | null
+  /**
+   * Joined driver / team string from the PID 0 RESULT row whose `STNR`
+   * (trimmed) equals the row's `NR` (trimmed). `null` when no snapshot is
+   * passed, when no RESULT row matches, or when the matched row carries
+   * neither a driver nor a team. See {@link composeDriverTeam} for the exact
+   * composition rule.
+   */
+  driverTeam: string | null
   /** Lap time in seconds. */
   seconds: number
   /** Display string via {@link formatLapSeconds}. */
@@ -308,15 +345,13 @@ export type BestLapByClassRow = {
   opacityStop: BestLapOpacityStop
   /** Day-time string from BESTLAPS row (raw); null if missing. */
   dayTime: string | null
-  /**
-   * Joined driver / team string from the PID 0 RESULT row whose `STNR`
-   * (trimmed) equals the row's `NR` (trimmed). `null` when no snapshot is
-   * passed, when no RESULT row matches, or when the matched row carries
-   * neither a driver nor a team. See {@link composeDriverTeam} for the exact
-   * composition rule.
-   */
-  driverTeam: string | null
 }
+
+/**
+ * Backward-compat alias. Older call sites and tests imported
+ * `BestLapByClassRow`; the shape is now the unified {@link BestLapBarRow}.
+ */
+export type BestLapByClassRow = BestLapBarRow
 
 /**
  * Compose the driver / team display string for a PID 0 `RESULT` row.
@@ -372,6 +407,135 @@ function opacityStopForRank(rank: number): BestLapOpacityStop {
 }
 
 /**
+ * Internal parsed shape produced by {@link parseAndJoinBestLaps}. Holds the
+ * filtered + RESULT-joined view of one BESTLAPS row before any dedup /
+ * primary-label / detail-text decision is made.
+ */
+type ParsedBestLap = {
+  classLabel: string
+  carNumber: string
+  seconds: number
+  dayTime: string | null
+  driverName: string | null
+  teamName: string | null
+  driverTeam: string | null
+}
+
+/**
+ * Read `stats.BESTLAPS`, apply the standard filters (CLASS empty/TOTAL,
+ * unparseable LAPTIME, excluded classes) and join each row to the matching
+ * PID 0 RESULT entry by trimmed `NR` ↔ `STNR`. Returns one entry per raw
+ * BESTLAPS row (no per-dimension dedup yet — callers do that step).
+ *
+ * Shared by {@link bestLapsByClass}, {@link bestLapsByCar} and
+ * {@link bestLapsByTeam} so the parsing/join rules stay in one place.
+ */
+function parseAndJoinBestLaps(
+  stats: Pid9002Frame | null | undefined,
+  excludedStatsClasses: ReadonlySet<string>,
+  snapshot: Pid0Frame | null | undefined
+): ParsedBestLap[] {
+  const filtered = filterRowsByExcludedClasses(
+    bestLapsArray(stats),
+    excludedStatsClasses
+  )
+  const resultIndex = buildResultIndexByStnr(snapshot)
+
+  const out: ParsedBestLap[] = []
+  for (const row of filtered) {
+    if (!row || typeof row !== "object") continue
+    const classLabel = trimmedString(row.CLASS)
+    if (!classLabel) continue
+    if (classLabel.toUpperCase() === "TOTAL") continue
+    const seconds = parseLapTimeToSeconds(row.LAPTIME)
+    if (seconds === null || !Number.isFinite(seconds) || seconds <= 0) continue
+
+    const trimmedNr = trimmedString(row.NR)
+    const matched =
+      trimmedNr && resultIndex.size > 0
+        ? (resultIndex.get(trimmedNr) ?? null)
+        : null
+    out.push({
+      classLabel,
+      carNumber: trimmedNr ?? EM_DASH,
+      seconds,
+      dayTime: trimmedString(row.DAYTIME),
+      driverName: matched ? trimmedString(matched.NAME) : null,
+      teamName: matched ? trimmedString(matched.TEAM) : null,
+      driverTeam: matched ? composeDriverTeam(matched) : null,
+    })
+  }
+  return out
+}
+
+/**
+ * Glue parts together with " · ", skipping nullish/empty fragments so we
+ * never render dangling separators. Returns `null` if every fragment was
+ * empty.
+ */
+function joinDot(parts: ReadonlyArray<string | null | undefined>): string | null {
+  const kept = parts.filter((p): p is string => Boolean(p && p.trim()))
+  return kept.length === 0 ? null : kept.join(" · ")
+}
+
+/**
+ * Generic dedup-by-key + rank/width/opacity assignment. The caller chooses
+ * the bucket key (`groupKey`) and how to render each row's primary / detail
+ * text. Empty/null bucket keys are dropped (e.g. team rows without a
+ * matched RESULT.TEAM).
+ */
+function buildBars(
+  parsed: ReadonlyArray<ParsedBestLap>,
+  groupKey: (p: ParsedBestLap) => string | null,
+  toLabels: (p: ParsedBestLap) => {
+    primaryLabel: string
+    detailText: string | null
+  }
+): BestLapBarRow[] {
+  if (parsed.length === 0) return []
+
+  const fastestPerKey = new Map<string, ParsedBestLap>()
+  for (const row of parsed) {
+    const key = groupKey(row)
+    if (!key) continue
+    const existing = fastestPerKey.get(key)
+    if (!existing || row.seconds < existing.seconds) {
+      fastestPerKey.set(key, row)
+    }
+  }
+  if (fastestPerKey.size === 0) return []
+
+  const deduped = Array.from(fastestPerKey.values())
+  deduped.sort((a, b) => a.seconds - b.seconds)
+  const fastest = deduped[0]!.seconds
+
+  return deduped.map((row, index) => {
+    const rank = index + 1
+    const rawPct = (fastest / row.seconds) * 100
+    const widthPct = Math.max(
+      MIN_BAR_WIDTH_PCT,
+      Math.min(100, Number.isFinite(rawPct) ? rawPct : 0)
+    )
+    const labels = toLabels(row)
+    return {
+      primaryLabel: labels.primaryLabel,
+      detailText: labels.detailText,
+      classLabel: row.classLabel,
+      carNumber: row.carNumber,
+      driverName: row.driverName,
+      teamName: row.teamName,
+      driverTeam: row.driverTeam,
+      seconds: row.seconds,
+      display: formatLapSeconds(row.seconds),
+      rank,
+      widthPct,
+      opacityStop: opacityStopForRank(rank),
+      dayTime: row.dayTime,
+    }
+  })
+}
+
+/**
  * Build the per-class best-lap table sorted ascending by lap time (fastest first).
  *
  * - Source is `stats.BESTLAPS`.
@@ -392,96 +556,83 @@ function opacityStopForRank(rank: number): BestLapOpacityStop {
  *
  * The optional `snapshot` argument is the latest PID 0 frame
  * (`useLiveStore.sessionMeta`). When provided, each row is enriched with a
- * {@link BestLapByClassRow.driverTeam} string composed from the matching
+ * {@link BestLapBarRow.driverTeam} string composed from the matching
  * `RESULT` row whose trimmed `STNR` equals the BESTLAPS row's trimmed `NR`.
  * When `null` / `undefined`, every `driverTeam` is `null`.
+ *
+ * The returned row's `primaryLabel` is the class label, `detailText` is
+ * `#NR · driverTeam` (driverTeam fragment skipped when absent).
  */
 export function bestLapsByClass(
   stats: Pid9002Frame | null | undefined,
   excludedStatsClasses: ReadonlySet<string> = new Set(),
   snapshot: Pid0Frame | null | undefined = null
-): BestLapByClassRow[] {
-  const filtered = filterRowsByExcludedClasses(
-    bestLapsArray(stats),
-    excludedStatsClasses
-  )
-
-  const resultIndex = buildResultIndexByStnr(snapshot)
-
-  type Parsed = {
-    classLabel: string
-    carNumber: string
-    seconds: number
-    dayTime: string | null
-    driverTeam: string | null
-  }
-
-  const parsed: Parsed[] = []
-  for (const row of filtered) {
-    if (!row || typeof row !== "object") {
-      continue
-    }
-    const classLabel = trimmedString(row.CLASS)
-    if (!classLabel) {
-      continue
-    }
-    if (classLabel.toUpperCase() === "TOTAL") {
-      continue
-    }
-    const seconds = parseLapTimeToSeconds(row.LAPTIME)
-    if (seconds === null || !Number.isFinite(seconds) || seconds <= 0) {
-      continue
-    }
-    const trimmedNr = trimmedString(row.NR)
-    const matched =
-      trimmedNr && resultIndex.size > 0 ? (resultIndex.get(trimmedNr) ?? null) : null
-    parsed.push({
-      classLabel,
-      carNumber: trimmedNr ?? EM_DASH,
-      seconds,
-      dayTime: trimmedString(row.DAYTIME),
-      driverTeam: matched ? composeDriverTeam(matched) : null,
+): BestLapBarRow[] {
+  const parsed = parseAndJoinBestLaps(stats, excludedStatsClasses, snapshot)
+  return buildBars(
+    parsed,
+    (p) => p.classLabel,
+    (p) => ({
+      primaryLabel: p.classLabel,
+      detailText: joinDot([`#${p.carNumber}`, p.driverTeam]),
     })
-  }
+  )
+}
 
-  if (parsed.length === 0) {
-    return []
-  }
+/**
+ * Build the per-car best-lap table — one row per car number, fastest first.
+ *
+ * Same parsing/filter/excluded-classes rules as {@link bestLapsByClass}.
+ * Dedup key is the trimmed `NR` (em-dash for missing). When the same car
+ * appears multiple times in BESTLAPS only its fastest lap is kept.
+ *
+ * `primaryLabel` is `#NR`, `detailText` is `class · driverTeam` (any null
+ * fragment is dropped, so cars without a RESULT match still render
+ * `Class` as the detail).
+ */
+export function bestLapsByCar(
+  stats: Pid9002Frame | null | undefined,
+  excludedStatsClasses: ReadonlySet<string> = new Set(),
+  snapshot: Pid0Frame | null | undefined = null
+): BestLapBarRow[] {
+  const parsed = parseAndJoinBestLaps(stats, excludedStatsClasses, snapshot)
+  return buildBars(
+    parsed,
+    (p) => p.carNumber,
+    (p) => ({
+      primaryLabel: `#${p.carNumber}`,
+      detailText: joinDot([p.classLabel, p.driverTeam]),
+    })
+  )
+}
 
-  // Dedupe per class — keep only the fastest lap per `classLabel`. WIGE's
-  // `BESTLAPS` can return several top laps for the same class/car, but this
-  // chart promises one row per class.
-  const fastestByClass = new Map<string, Parsed>()
-  for (const row of parsed) {
-    const existing = fastestByClass.get(row.classLabel)
-    if (!existing || row.seconds < existing.seconds) {
-      fastestByClass.set(row.classLabel, row)
-    }
-  }
-  const deduped = Array.from(fastestByClass.values())
-
-  deduped.sort((a, b) => a.seconds - b.seconds)
-  const fastest = deduped[0]!.seconds
-
-  return deduped.map((row, index) => {
-    const rank = index + 1
-    const rawPct = (fastest / row.seconds) * 100
-    const widthPct = Math.max(
-      MIN_BAR_WIDTH_PCT,
-      Math.min(100, Number.isFinite(rawPct) ? rawPct : 0)
-    )
-    return {
-      classLabel: row.classLabel,
-      carNumber: row.carNumber,
-      seconds: row.seconds,
-      display: formatLapSeconds(row.seconds),
-      rank,
-      widthPct,
-      opacityStop: opacityStopForRank(rank),
-      dayTime: row.dayTime,
-      driverTeam: row.driverTeam,
-    }
-  })
+/**
+ * Build the per-team best-lap table — one row per team name, fastest first.
+ *
+ * Same parsing/filter/excluded-classes rules as {@link bestLapsByClass}.
+ * Dedup key is the trimmed PID 0 `RESULT.TEAM` of the matched car. Rows
+ * without a RESULT match (or whose matched RESULT has no `TEAM`) are
+ * **dropped** — without a team name there is nothing meaningful to bucket
+ * by. As a consequence the result is empty when no `snapshot` is passed.
+ *
+ * `primaryLabel` is the team name, `detailText` is
+ * `#NR · class · driverName` (driverName only — the team is already the
+ * primary, so we don't repeat it via `driverTeam`).
+ */
+export function bestLapsByTeam(
+  stats: Pid9002Frame | null | undefined,
+  excludedStatsClasses: ReadonlySet<string> = new Set(),
+  snapshot: Pid0Frame | null | undefined = null
+): BestLapBarRow[] {
+  const parsed = parseAndJoinBestLaps(stats, excludedStatsClasses, snapshot)
+  return buildBars(
+    parsed,
+    (p) => p.teamName,
+    (p) => ({
+      primaryLabel: p.teamName ?? EM_DASH,
+      detailText: joinDot([`#${p.carNumber}`, p.classLabel, p.driverName]),
+    })
+  )
 }
 
 /** Tailwind opacity stop chosen for a sector heatmap cell. */
