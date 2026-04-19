@@ -144,6 +144,25 @@ describe("LiveTimingClient (mock WebSocket)", () => {
     expect(onJson).toHaveBeenCalledWith(pid0)
   })
 
+  it("calls onError when WebSocket constructor throws", () => {
+    const ThrowingCtor = class {
+      constructor(url: string | URL) {
+        void url
+        throw new Error("blocked")
+      }
+    } as unknown as typeof WebSocket
+
+    const onError = vi.fn()
+    const client = new LiveTimingClient({
+      WebSocketImpl: ThrowingCtor,
+      eventId: "e1",
+      eventPid: [0],
+    })
+    client.connect({ onError })
+
+    expect(onError).toHaveBeenCalledWith("blocked")
+  })
+
   it("calls onError with event not found for LTS_NOT_FOUND", async () => {
     const MockCtor = createMockCtor()
     const onError = vi.fn()

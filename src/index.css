@@ -217,4 +217,14 @@
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }
+  .stats-row-highlight {
+    background-color: color-mix(
+      in srgb,
+      var(--stitch-primary-container) 30%,
+      transparent
+    );
+    transition: background-color 300ms ease-out;
+    outline: 1px solid var(--color-primary-container);
+    outline-offset: -1px;
+  }
 }

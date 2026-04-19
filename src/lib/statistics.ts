@@ -465,6 +465,399 @@ export function bestLapsByClass(
   })
 }
 
+/** Tailwind opacity stop chosen for a sector heatmap cell. */
+export type SectorHeatmapOpacityStop =
+  | 100
+  | 90
+  | 80
+  | 70
+  | 60
+  | 50
+  | 40
+  | 30
+  | 20
+  | 10
+
+/** A single heat cell in the sector heatmap. */
+export type SectorHeatmapCell = {
+  /** Raw sector time in seconds, parsed from `S{n}`. `null` when missing or unparseable. */
+  seconds: number | null
+  /** Display string for the cell. Empty string when no value. */
+  display: string
+  /** Tailwind opacity stop. `null` when no value or when the column has no best. */
+  opacityStop: SectorHeatmapOpacityStop | null
+  /** Delta to the column best, in seconds (>= 0; 0 for the column best). `null` when no value. */
+  deltaSeconds: number | null
+  /** Relative delta (delta / colBest). `null` when no value or `colBest <= 0`. */
+  deltaRel: number | null
+  /** True iff this cell is the column best (i.e. the actual minimum and `deltaSeconds === 0`). */
+  isColumnBest: boolean
+}
+
+/** A heatmap row keyed by class label. */
+export type SectorHeatmapRow = {
+  classLabel: string
+  /** length === sectorCount */
+  cells: SectorHeatmapCell[]
+  /** Parsed `BESTSECTORS[i].LAPTIME`. `null` when missing or unparseable. */
+  lapTimeSeconds: number | null
+  /** Display string from {@link formatLapSeconds} or `""` when missing. */
+  lapTimeDisplay: string
+}
+
+/** Heatmap data ready for the `<SectorHeatmap />` renderer. */
+export type SectorHeatmapData = {
+  /** Class labels in render order: TOTAL first (when present), then wire order. */
+  classes: string[]
+  /** 1..9 dynamic via the maximum number of populated `S{n}` columns. */
+  sectorCount: number
+  /** Best (minimum) seconds per sector column, or `null` when the column is fully empty. */
+  columnBestsSeconds: (number | null)[]
+  /** Same index alignment as {@link classes}. */
+  rows: SectorHeatmapRow[]
+}
+
+/**
+ * Maximum populated `S{n}` column index (1..9) across the given rows.
+ * Mirrors the `maxSectorColumns` helper in `StatisticsPanel.tsx`; kept private
+ * to this module to avoid a cross-module coupling on a tiny utility.
+ */
+function maxSectorColumns(rows: StatisticsBestSectorRow[]): number {
+  let max = 0
+  for (let n = 1; n <= 9; n++) {
+    const key = `S${n}` as keyof StatisticsBestSectorRow
+    if (rows.some((r) => trimmedString(r[key]) !== null)) {
+      max = n
+    }
+  }
+  return max
+}
+
+/**
+ * Bin a relative delta (delta / colBest) into the desktop heatmap opacity stop.
+ *
+ * The PRD describes the binning as "by quantile of (cell − columnBest) / columnBest".
+ * Quantile binning is degenerate over typical 3-7 row populations, so we use the
+ * documented stable cutoff scheme that matches the Stitch reference rendering
+ * (`stats-cockpit-desktop.html` lines 295–334):
+ *
+ * | deltaRel              | stop |
+ * | --------------------- | ---- |
+ * | `0` (column best)     | 100  |
+ * | `<= 0.005`            |  90  |
+ * | `<= 0.010`            |  80  |
+ * | `<= 0.020`            |  70  |
+ * | `<= 0.030`            |  60  |
+ * | `<= 0.050`            |  50  |
+ * | `<= 0.075`            |  40  |
+ * | `<= 0.100`            |  30  |
+ * | `<= 0.150`            |  20  |
+ * | else (slowest tier)   |  10  |
+ */
+function opacityStopForDeltaRel(deltaRel: number): SectorHeatmapOpacityStop {
+  if (deltaRel <= 0) return 100
+  if (deltaRel <= 0.005) return 90
+  if (deltaRel <= 0.01) return 80
+  if (deltaRel <= 0.02) return 70
+  if (deltaRel <= 0.03) return 60
+  if (deltaRel <= 0.05) return 50
+  if (deltaRel <= 0.075) return 40
+  if (deltaRel <= 0.1) return 30
+  if (deltaRel <= 0.15) return 20
+  return 10
+}
+
+function isTotalClass(label: string | null): boolean {
+  return label !== null && label.toUpperCase() === "TOTAL"
+}
+
+/**
+ * Build the sector heatmap matrix from `PID 9002.BESTSECTORS`.
+ *
+ * Layout & ordering:
+ * - Rows: synthetic `TOTAL` row first (when present), then real classes in the
+ *   wire order they first appeared in `BESTSECTORS` (preserves the Stitch order).
+ * - Columns: `S1..Sn` where `n = max(1, populated sector index)`. Returns an
+ *   all-empty {@link SectorHeatmapData} when no row has any sector value.
+ *
+ * Filtering:
+ * - {@link excludedStatsClasses} filters real classes out of {@link SectorHeatmapData.rows}
+ *   AND out of the per-column best computation.
+ * - The synthetic `TOTAL` row is **never** filtered, even when "TOTAL" is in
+ *   the excluded set, because it represents the absolute reference. It also
+ *   participates in the per-column best.
+ *
+ * Per-cell:
+ * - `seconds = parseLapTimeToSeconds(row.S{n})`; `null` when missing /
+ *   unparseable / `<= 0`.
+ * - `deltaSeconds = seconds - colBest` (>= 0; 0 for the column best).
+ * - `deltaRel = deltaSeconds / colBest` (`colBest > 0`).
+ * - `opacityStop` per the cutoff scheme documented on
+ *   {@link opacityStopForDeltaRel}; `null` when the cell or column has no value.
+ *
+ * Per-row LAP column:
+ * - `lapTimeSeconds = parseLapTimeToSeconds(row.LAPTIME)`,
+ *   `lapTimeDisplay = formatLapSeconds(lapTimeSeconds)` (or `""` when missing).
+ */
+export function sectorHeatmap(
+  stats: Pid9002Frame | null | undefined,
+  excludedStatsClasses: ReadonlySet<string> = new Set()
+): SectorHeatmapData {
+  const all = bestSectorsArray(stats)
+  if (all.length === 0) {
+    return { classes: [], sectorCount: 0, columnBestsSeconds: [], rows: [] }
+  }
+
+  const totalRow = findTotalSectorRow(all)
+  const nonTotalRows = all.filter((r) => {
+    if (!r || typeof r !== "object") return false
+    return !isTotalClass(trimmedString(r.CLASS))
+  })
+  const filteredNonTotal = filterRowsByExcludedClasses(
+    nonTotalRows,
+    excludedStatsClasses
+  )
+
+  const usedRows: StatisticsBestSectorRow[] = []
+  if (totalRow) usedRows.push(totalRow)
+  usedRows.push(...filteredNonTotal)
+
+  const rawSectorCount = maxSectorColumns(usedRows)
+  if (rawSectorCount === 0) {
+    return { classes: [], sectorCount: 0, columnBestsSeconds: [], rows: [] }
+  }
+  const sectorCount = Math.max(1, rawSectorCount)
+
+  type Parsed = {
+    classLabel: string
+    secondsPerSector: (number | null)[]
+    lapTimeSeconds: number | null
+  }
+
+  const parsedRows: Parsed[] = []
+  for (const row of usedRows) {
+    const classLabel = trimmedString(row.CLASS)
+    if (!classLabel) continue
+    const secondsPerSector: (number | null)[] = []
+    for (let i = 1; i <= sectorCount; i++) {
+      const key = `S${i}` as keyof StatisticsBestSectorRow
+      const seconds = parseLapTimeToSeconds(row[key])
+      if (seconds === null || !Number.isFinite(seconds) || seconds <= 0) {
+        secondsPerSector.push(null)
+      } else {
+        secondsPerSector.push(seconds)
+      }
+    }
+    const lapSeconds = parseLapTimeToSeconds(row.LAPTIME)
+    parsedRows.push({
+      classLabel,
+      secondsPerSector,
+      lapTimeSeconds:
+        lapSeconds !== null && Number.isFinite(lapSeconds) && lapSeconds > 0
+          ? lapSeconds
+          : null,
+    })
+  }
+
+  const columnBestsSeconds: (number | null)[] = []
+  for (let i = 0; i < sectorCount; i++) {
+    let best: number | null = null
+    for (const r of parsedRows) {
+      const v = r.secondsPerSector[i]
+      if (v === null) continue
+      if (best === null || v < best) best = v
+    }
+    columnBestsSeconds.push(best)
+  }
+
+  const rows: SectorHeatmapRow[] = parsedRows.map((p) => {
+    const cells: SectorHeatmapCell[] = p.secondsPerSector.map((seconds, i) => {
+      if (seconds === null) {
+        return {
+          seconds: null,
+          display: "",
+          opacityStop: null,
+          deltaSeconds: null,
+          deltaRel: null,
+          isColumnBest: false,
+        }
+      }
+      const colBest = columnBestsSeconds[i]
+      if (colBest === null || colBest <= 0) {
+        return {
+          seconds,
+          display: formatLapSeconds(seconds),
+          opacityStop: null,
+          deltaSeconds: null,
+          deltaRel: null,
+          isColumnBest: false,
+        }
+      }
+      const deltaSeconds = seconds - colBest
+      const deltaRel = deltaSeconds / colBest
+      const isColumnBest = deltaSeconds === 0
+      return {
+        seconds,
+        display: formatLapSeconds(seconds),
+        opacityStop: opacityStopForDeltaRel(deltaRel),
+        deltaSeconds,
+        deltaRel,
+        isColumnBest,
+      }
+    })
+    return {
+      classLabel: p.classLabel,
+      cells,
+      lapTimeSeconds: p.lapTimeSeconds,
+      lapTimeDisplay:
+        p.lapTimeSeconds === null ? "" : formatLapSeconds(p.lapTimeSeconds),
+    }
+  })
+
+  return {
+    classes: rows.map((r) => r.classLabel),
+    sectorCount,
+    columnBestsSeconds,
+    rows,
+  }
+}
+
+/** A single row in the enriched class-leaders table (PRD Statistik §"enriched leading table"). */
+export type EnrichedLeadingRow = {
+  /** Class label, e.g. "SP9". em-dash when missing. */
+  classLabel: string
+  /** Trimmed car number string. em-dash when missing. */
+  carNumber: string
+  /**
+   * Driver / team display from RESULT join via {@link composeDriverTeam}.
+   * `null` when no snapshot was passed, when the carNumber has no STNR match,
+   * or when the matched RESULT row carries neither driver nor team.
+   */
+  driverTeam: string | null
+  /** Lap count, parsed integer. `null` when missing / unparseable. */
+  laps: number | null
+  /**
+   * Gap to leader. Raw display string from `LEADING.GAP`.
+   * - When the row is the leader → `"Leader"` (literal, locale-free).
+   * - When not-leader and the wire field is empty after trimming → `"—"`.
+   * - Otherwise the trimmed wire string verbatim.
+   */
+  gap: string
+  /** Whether this row is the leader (gap is empty / "0" / "0.000" / "leader"). */
+  isLeader: boolean
+  /** Total session time. Raw display from `LEADING.SUM`. em-dash when missing. */
+  sumDisplay: string
+  /**
+   * "Seit Runde N" — wire field `FROMLAP` per {@link StatisticsLeadingRow}.
+   * `null` when missing or unparseable.
+   */
+  fromLap: number | null
+}
+
+/** Output of {@link enrichedLeading}. Wrapped so future bands can carry per-table chrome. */
+export type EnrichedLeadingData = {
+  /** Per-class leading rows. Wire order is preserved (one entry per class). */
+  rows: EnrichedLeadingRow[]
+}
+
+/**
+ * Match the trimmed gap value against the documented "this is the leader" forms.
+ * Case-insensitive. Empty / whitespace counts as a leader marker (the wire
+ * routinely sends an empty `GAP` for the class leader).
+ */
+function isLeaderGap(trimmed: string): boolean {
+  if (trimmed === "") return true
+  const lower = trimmed.toLowerCase()
+  return lower === "0" || lower === "0.000" || lower === "leader"
+}
+
+function parseLaps(value: WireScalar | undefined): number | null {
+  if (value === undefined || value === null) return null
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? Math.trunc(value) : null
+  }
+  const trimmed = String(value).trim()
+  if (trimmed === "") return null
+  const parsed = Number.parseInt(trimmed, 10)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
+/**
+ * Build the per-class leading rows joined with PID 0 RESULT.STNR for the
+ * Statistik tab "Klassen-Führende" table.
+ *
+ * Source is `stats.LEADING`. Synthetic rows where `CLASS` is empty or
+ * `"TOTAL"` (case-insensitive) are filtered out — TOTAL is not a class leader.
+ * The {@link excludedStatsClasses} predicate is then applied so the same
+ * spectator filter drives the bar chart, heatmap and this table.
+ *
+ * For each surviving wire row:
+ * - `classLabel` = trimmed `CLASS` or `"—"`.
+ * - `carNumber` = trimmed `NR` or `"—"`.
+ * - `driverTeam` = lookup `snapshot.RESULT[*]` whose trimmed `STNR === carNumber`,
+ *   then {@link composeDriverTeam}. `null` otherwise (or when carNumber is `"—"`).
+ * - `laps` = `parseInt(LAPS)`; `null` when NaN / missing.
+ * - `gap` is the trimmed `GAP` value with the "Leader" rewrite applied per
+ *   {@link EnrichedLeadingRow.gap}; `isLeader` mirrors that decision.
+ * - `sumDisplay` = trimmed `SUM` or `"—"`.
+ * - `fromLap` = parsed integer `FROMLAP` (the wire field documented on
+ *   {@link StatisticsLeadingRow}); `null` when missing.
+ *
+ * Wire order is preserved (the PID 9002 stream delivers leading rows already
+ * grouped by class — that is the order Stitch shows). Pure: never reads from
+ * any store.
+ */
+export function enrichedLeading(
+  stats: Pid9002Frame | null | undefined,
+  snapshot: Pid0Frame | null | undefined = null,
+  excludedStatsClasses: ReadonlySet<string> = new Set()
+): EnrichedLeadingData {
+  const all = leadingArray(stats)
+  if (all.length === 0) return { rows: [] }
+
+  const nonTotal = all.filter((row) => {
+    if (!row || typeof row !== "object") return false
+    const cls = trimmedString(row.CLASS)
+    return cls !== null && cls.toUpperCase() !== "TOTAL"
+  })
+  const filtered = filterRowsByExcludedClasses(nonTotal, excludedStatsClasses)
+
+  const resultIndex = buildResultIndexByStnr(snapshot)
+
+  const rows: EnrichedLeadingRow[] = filtered.map((row) => {
+    const classLabel = trimmedString(row.CLASS) ?? EM_DASH
+    const carNumberRaw = trimmedString(row.NR)
+    const carNumber = carNumberRaw ?? EM_DASH
+
+    const matched =
+      carNumberRaw && resultIndex.size > 0
+        ? (resultIndex.get(carNumberRaw) ?? null)
+        : null
+    const driverTeam = matched ? composeDriverTeam(matched) : null
+
+    const gapRaw = trimmedString(row.GAP) ?? ""
+    const leader = isLeaderGap(gapRaw)
+    const gap = leader ? "Leader" : gapRaw === "" ? EM_DASH : gapRaw
+
+    const sumDisplay = trimmedString(row.SUM) ?? EM_DASH
+    const fromLap = parseLaps(row.FROMLAP)
+    const laps = parseLaps(row.LAPS)
+
+    return {
+      classLabel,
+      carNumber,
+      driverTeam,
+      laps,
+      gap,
+      isLeader: leader,
+      sumDisplay,
+      fromLap,
+    }
+  })
+
+  return { rows }
+}
+
 /**
  * Format a signed delta (in seconds) for the "Δ Real → Theoretisch" KPI.
  *

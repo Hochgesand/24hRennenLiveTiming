@@ -5,9 +5,11 @@ import {
   bestLapsByClass,
   classKpis,
   composeDriverTeam,
+  enrichedLeading,
   filterRowsByExcludedClasses,
   formatDeltaSeconds,
   isStatsClassExcluded,
+  sectorHeatmap,
 } from "@/lib/statistics"
 import type { Pid0Frame, Pid9002Frame, RawResultRow } from "@/lib/types"
 
@@ -572,5 +574,270 @@ describe("bestLapsByClass — driverTeam join", () => {
     })
     const rows = bestLapsByClass(statsWithSpace, new Set(), snap)
     expect(rows[0]!.driverTeam).toBe("Max Mustermann · Manthey EMA")
+  })
+})
+
+describe("sectorHeatmap", () => {
+  it("returns an empty heatmap for null / undefined / no BESTSECTORS input", () => {
+    const empty = {
+      classes: [],
+      sectorCount: 0,
+      columnBestsSeconds: [],
+      rows: [],
+    }
+    expect(sectorHeatmap(null)).toEqual(empty)
+    expect(sectorHeatmap(undefined)).toEqual(empty)
+    expect(sectorHeatmap(frame({}))).toEqual(empty)
+    expect(sectorHeatmap(frame({ BESTSECTORS: [] }))).toEqual(empty)
+  })
+
+  it("derives sectorCount, columnBestsSeconds, and per-cell metadata for 3 classes × 4 sectors", () => {
+    const stats = frame({
+      BESTSECTORS: [
+        { CLASS: "SP9", S1: "81.0", S2: "94.0", S3: "120.0", S4: "76.0", LAPTIME: "6:11.000" },
+        { CLASS: "SP-X", S1: "82.0", S2: "95.0", S3: "121.0", S4: "75.0", LAPTIME: "6:13.000" },
+        { CLASS: "CUP2", S1: "85.0", S2: "99.0", S3: "131.0", S4: "81.0", LAPTIME: "6:36.000" },
+      ],
+    })
+
+    const data = sectorHeatmap(stats)
+    expect(data.sectorCount).toBe(4)
+    expect(data.classes).toEqual(["SP9", "SP-X", "CUP2"])
+    expect(data.columnBestsSeconds).toEqual([81, 94, 120, 75])
+
+    expect(data.rows[0]!.cells[0]!).toMatchObject({
+      seconds: 81,
+      isColumnBest: true,
+      opacityStop: 100,
+      deltaSeconds: 0,
+    })
+    expect(data.rows[1]!.cells[3]!).toMatchObject({
+      seconds: 75,
+      isColumnBest: true,
+      opacityStop: 100,
+    })
+    expect(data.rows[2]!.cells[0]!.isColumnBest).toBe(false)
+    expect(data.rows[2]!.cells[0]!.deltaSeconds).toBeCloseTo(4, 6)
+    expect(data.rows[0]!.lapTimeSeconds).toBeCloseTo(371, 6)
+    expect(data.rows[0]!.lapTimeDisplay).toBe("6:11.000")
+  })
+
+  it("treats missing S{n} cells as null and keeps them out of the column best", () => {
+    const stats = frame({
+      BESTSECTORS: [
+        { CLASS: "SP9", S1: "81.0", S2: "94.0", S3: "120.0", S4: "76.0", S5: "30.0" },
+        { CLASS: "SP-X", S1: "82.0", S2: "95.0", S3: "121.0", S4: "75.0" /* S5 missing */ },
+      ],
+    })
+
+    const data = sectorHeatmap(stats)
+    expect(data.sectorCount).toBe(5)
+    expect(data.columnBestsSeconds[4]).toBe(30)
+
+    const spxS5 = data.rows[1]!.cells[4]!
+    expect(spxS5.seconds).toBeNull()
+    expect(spxS5.display).toBe("")
+    expect(spxS5.opacityStop).toBeNull()
+    expect(spxS5.deltaSeconds).toBeNull()
+    expect(spxS5.deltaRel).toBeNull()
+    expect(spxS5.isColumnBest).toBe(false)
+  })
+
+  it("filters non-TOTAL classes via excludedStatsClasses, including out of column best", () => {
+    const stats = frame({
+      BESTSECTORS: [
+        { CLASS: "SP9", S1: "81.0", S2: "94.0" },
+        { CLASS: "SP-X", S1: "70.0", S2: "95.0" },
+        { CLASS: "CUP2", S1: "85.0", S2: "99.0" },
+      ],
+    })
+
+    const data = sectorHeatmap(stats, new Set(["SP-X"]))
+    expect(data.classes).toEqual(["SP9", "CUP2"])
+    expect(data.columnBestsSeconds[0]).toBe(81)
+    expect(data.rows.find((r) => r.classLabel === "SP-X")).toBeUndefined()
+  })
+
+  it("never filters TOTAL — even when 'TOTAL' is in excludedStatsClasses — and renders it first", () => {
+    const stats = frame({
+      BESTSECTORS: [
+        { CLASS: "SP9", S1: "81.0", S2: "94.0", LAPTIME: "5:55.000" },
+        { CLASS: "TOTAL", S1: "80.0", S2: "92.0", LAPTIME: "5:50.000" },
+        { CLASS: "CUP2", S1: "85.0", S2: "99.0", LAPTIME: "6:00.000" },
+      ],
+    })
+
+    const data = sectorHeatmap(stats, new Set(["TOTAL", "SP9"]))
+    expect(data.classes[0]).toBe("TOTAL")
+    expect(data.classes).toEqual(["TOTAL", "CUP2"])
+    expect(data.columnBestsSeconds).toEqual([80, 92])
+    expect(data.rows[0]!.cells[0]!.isColumnBest).toBe(true)
+  })
+
+  it("includes TOTAL in the column best computation by default", () => {
+    const stats = frame({
+      BESTSECTORS: [
+        { CLASS: "TOTAL", S1: "70.0", S2: "85.0" },
+        { CLASS: "SP9", S1: "81.0", S2: "94.0" },
+        { CLASS: "CUP2", S1: "85.0", S2: "99.0" },
+      ],
+    })
+    const data = sectorHeatmap(stats)
+    expect(data.classes).toEqual(["TOTAL", "SP9", "CUP2"])
+    expect(data.columnBestsSeconds).toEqual([70, 85])
+    expect(data.rows[0]!.cells[0]!.isColumnBest).toBe(true)
+    expect(data.rows[1]!.cells[0]!.isColumnBest).toBe(false)
+  })
+
+  it("bins synthetic deltas onto the documented opacity stops", () => {
+    // Column best is 100s. Add synthetic rows so each row's S1 maps to a
+    // specific deltaRel and therefore a specific opacity stop.
+    const stats = frame({
+      BESTSECTORS: [
+        { CLASS: "C0", S1: "100.0" }, // 0 % → 100
+        { CLASS: "C1", S1: "100.4" }, // 0.4 % → 90
+        { CLASS: "C2", S1: "101.0" }, // 1 % → 80
+        { CLASS: "C3", S1: "101.5" }, // 1.5 % → 70
+        { CLASS: "C4", S1: "102.5" }, // 2.5 % → 60
+        { CLASS: "C5", S1: "104.0" }, // 4 % → 50
+        { CLASS: "C6", S1: "107.0" }, // 7 % → 40
+        { CLASS: "C7", S1: "109.0" }, // 9 % → 30
+        { CLASS: "C8", S1: "112.0" }, // 12 % → 20
+        { CLASS: "C9", S1: "120.0" }, // 20 % → 10
+      ],
+    })
+
+    const data = sectorHeatmap(stats)
+    const stops = data.rows.map((r) => r.cells[0]!.opacityStop)
+    expect(stops).toEqual([100, 90, 80, 70, 60, 50, 40, 30, 20, 10])
+  })
+
+  it("sets lapTimeDisplay to '' when the row has no parseable LAPTIME", () => {
+    const stats = frame({
+      BESTSECTORS: [{ CLASS: "SP9", S1: "81.0", LAPTIME: "DNF" }],
+    })
+    const data = sectorHeatmap(stats)
+    expect(data.rows[0]!.lapTimeSeconds).toBeNull()
+    expect(data.rows[0]!.lapTimeDisplay).toBe("")
+  })
+
+  it("preserves wire order for non-TOTAL classes (TOTAL still goes first)", () => {
+    const stats = frame({
+      BESTSECTORS: [
+        { CLASS: "Z", S1: "70.0" },
+        { CLASS: "A", S1: "80.0" },
+        { CLASS: "TOTAL", S1: "60.0" },
+        { CLASS: "M", S1: "75.0" },
+      ],
+    })
+    const data = sectorHeatmap(stats)
+    expect(data.classes).toEqual(["TOTAL", "Z", "A", "M"])
+  })
+})
+
+describe("enrichedLeading", () => {
+  it("returns an empty rows array for null / undefined / empty stats", () => {
+    expect(enrichedLeading(null)).toEqual({ rows: [] })
+    expect(enrichedLeading(undefined)).toEqual({ rows: [] })
+    expect(enrichedLeading(frame({}))).toEqual({ rows: [] })
+    expect(enrichedLeading(frame({ LEADING: [] }))).toEqual({ rows: [] })
+  })
+
+  it("filters out the synthetic TOTAL row", () => {
+    const stats = frame({
+      LEADING: [
+        { CLASS: "TOTAL", NR: "0", LAPS: "200", SUM: "16:42:04.001" },
+        { CLASS: "SP9", NR: "911", LAPS: "124", SUM: "16:41:22.401" },
+      ],
+    })
+    const data = enrichedLeading(stats)
+    expect(data.rows).toHaveLength(1)
+    expect(data.rows[0]!.classLabel).toBe("SP9")
+  })
+
+  it("filters out classes that appear in excludedStatsClasses", () => {
+    const stats = frame({
+      LEADING: [
+        { CLASS: "SP9", NR: "911", LAPS: "124" },
+        { CLASS: "CUP2", NR: "121", LAPS: "118" },
+        { CLASS: "SP-X", NR: "706", LAPS: "122" },
+      ],
+    })
+    const data = enrichedLeading(stats, null, new Set(["CUP2"]))
+    expect(data.rows.map((r) => r.classLabel)).toEqual(["SP9", "SP-X"])
+  })
+
+  it("joins LEADING.NR with PID 0 RESULT.STNR via composeDriverTeam, em-dash otherwise", () => {
+    const stats = frame({
+      LEADING: [
+        { CLASS: "SP9", NR: "911", LAPS: "124", GAP: "" },
+        { CLASS: "SP-X", NR: "706", LAPS: "122", GAP: "+2 Laps" },
+      ],
+    })
+    const snap = snapshot([
+      { STNR: "911", NAME: "Vanthorr / Estre / Preining", TEAM: "Manthey EMA" },
+    ])
+
+    const data = enrichedLeading(stats, snap)
+    expect(data.rows[0]!.driverTeam).toBe(
+      "Vanthorr / Estre / Preining · Manthey EMA"
+    )
+    expect(data.rows[1]!.driverTeam).toBeNull()
+  })
+
+  it("rewrites empty / 0 / Leader gap to the literal 'Leader' and flips isLeader", () => {
+    const stats = frame({
+      LEADING: [
+        { CLASS: "SP9", NR: "911", LAPS: "124", GAP: "" },
+        { CLASS: "SP-X", NR: "706", LAPS: "122", GAP: "+2 Laps" },
+        { CLASS: "CUP2", NR: "121", LAPS: "118", GAP: "0" },
+        { CLASS: "VT2", NR: "333", LAPS: "108", GAP: "Leader" },
+      ],
+    })
+    const data = enrichedLeading(stats)
+
+    expect(data.rows[0]).toMatchObject({ gap: "Leader", isLeader: true })
+    expect(data.rows[1]).toMatchObject({ gap: "+2 Laps", isLeader: false })
+    expect(data.rows[2]).toMatchObject({ gap: "Leader", isLeader: true })
+    expect(data.rows[3]).toMatchObject({ gap: "Leader", isLeader: true })
+  })
+
+  it("parses FROMLAP into fromLap as integer, null when missing or unparseable", () => {
+    const stats = frame({
+      LEADING: [
+        { CLASS: "SP9", NR: "911", LAPS: "124", FROMLAP: 142 },
+        { CLASS: "SP-X", NR: "706", LAPS: "122", FROMLAP: "138" },
+        { CLASS: "CUP2", NR: "121", LAPS: "118" /* FROMLAP missing */ },
+        { CLASS: "VT2", NR: "333", LAPS: "108", FROMLAP: "—" },
+      ],
+    })
+    const data = enrichedLeading(stats)
+    expect(data.rows[0]!.fromLap).toBe(142)
+    expect(data.rows[1]!.fromLap).toBe(138)
+    expect(data.rows[2]!.fromLap).toBeNull()
+    expect(data.rows[3]!.fromLap).toBeNull()
+  })
+
+  it("parses LAPS to a number, falls back to em-dash for missing nr / sum (rows with empty CLASS are dropped)", () => {
+    const stats = frame({
+      LEADING: [
+        { CLASS: "VT2", NR: "  ", LAPS: "abc", SUM: "  " },
+        { CLASS: "SP9", NR: "911", LAPS: 124, SUM: "16:41:22.401" },
+      ],
+    })
+    const data = enrichedLeading(stats)
+    expect(data.rows).toHaveLength(2)
+    expect(data.rows[0]).toMatchObject({
+      classLabel: "VT2",
+      carNumber: "—",
+      laps: null,
+      sumDisplay: "—",
+    })
+    expect(data.rows[1]).toMatchObject({
+      classLabel: "SP9",
+      carNumber: "911",
+      laps: 124,
+      sumDisplay: "16:41:22.401",
+    })
   })
 })

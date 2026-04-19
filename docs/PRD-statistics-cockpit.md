@@ -85,23 +85,23 @@ These rules are binding for the implementation:
 
 ### Statistik tab — sector heatmap
 
-1. **[offen]** As an analyst, I want a **sector heatmap matrix** with rows = class and columns = `S1..Sn` (n derived dynamically via `maxSectorColumns`, no hardcoding to 9), so that the matrix shrinks/grows with the actual circuit layout.
-2. **[offen]** As an analyst, I want each desktop cell shaded with `**bg-red-600/{opacity}`** where opacity ramps `100 / 90 / 80 / 70 / 60 / 50 / 40 / 30 / 20 / 10` by quantile of `(cell − columnBest) / columnBest`, exactly mirroring `stats-cockpit-desktop.html` lines 295–334. Mobile uses the **inline-pill variant** (`<span class="bg-{secondary,primary,tertiary}-container/20 …">`) per `stats-cockpit-mobile.html` lines 191–211, where colour encodes which class owns the column-best.
-3. **[offen]** As an analyst, I want each cell to display the **absolute sector time** in mono ~10–11 px and to expose a tooltip with the **delta vs. column-best** (`+0.142 s`, `+1.81 %`).
-4. **[offen]** As an analyst, I want a final **LAP** column appended after S-columns showing `BESTSECTORS[i].LAPTIME` in `bg-zinc-800` (desktop) or `text-right font-bold` (mobile), matching the Stitch markup.
-5. **[offen]** As a mobile user, I want the matrix to **horizontally scroll with a sticky first column** (`position: sticky; left: 0; bg-background`), so that the row label never disappears.
-6. **[offen]** As a developer, I want the heatmap implemented as a `**<table>` with `border-separate border-spacing-px`** (Stitch markup), not as a CSS grid. Cells are `<td>` so semantic table semantics carry the row/col headers; each interactive cell additionally exposes `aria-label` and `title` for the delta tooltip.
-7. **[offen]** As a desktop user, I want the heatmap to take **40 %** of the main band width (`lg:col-span-4` of a `lg:grid-cols-10`), the bar chart **60 %** (`lg:col-span-6`), per Stitch `<div class="grid lg:grid-cols-10 gap-6">`.
-8. **[offen]** As an analyst, I want a click on a heatmap row's class label to **scroll the leading table** to the matching class row and highlight it for 1.5 s (no drilldown if the row has no `NR`).
+1. **[done]** As an analyst, I want a **sector heatmap matrix** with rows = class and columns = `S1..Sn` (n derived dynamically via `maxSectorColumns`, no hardcoding to 9), so that the matrix shrinks/grows with the actual circuit layout.
+2. **[done]** As an analyst, I want each desktop cell shaded with `**bg-red-600/{opacity}`** where opacity ramps `100 / 90 / 80 / 70 / 60 / 50 / 40 / 30 / 20 / 10` by quantile of `(cell − columnBest) / columnBest`, exactly mirroring `stats-cockpit-desktop.html` lines 295–334. Mobile uses the **inline-pill variant** (`<span class="bg-{secondary,primary,tertiary}-container/20 …">`) per `stats-cockpit-mobile.html` lines 191–211, where colour encodes which class owns the column-best.
+3. **[done]** As an analyst, I want each cell to display the **absolute sector time** in mono ~10–11 px and to expose a tooltip with the **delta vs. column-best** (`+0.142 s`, `+1.81 %`).
+4. **[done]** As an analyst, I want a final **LAP** column appended after S-columns showing `BESTSECTORS[i].LAPTIME` in `bg-zinc-800` (desktop) or `text-right font-bold` (mobile), matching the Stitch markup.
+5. **[done]** As a mobile user, I want the matrix to **horizontally scroll with a sticky first column** (`position: sticky; left: 0; bg-background`), so that the row label never disappears.
+6. **[done]** As a developer, I want the heatmap implemented as a `**<table>` with `border-separate border-spacing-px`** (Stitch markup), not as a CSS grid. Cells are `<td>` so semantic table semantics carry the row/col headers; each interactive cell additionally exposes `aria-label` and `title` for the delta tooltip.
+7. **[done]** As a desktop user, I want the heatmap to take **40 %** of the main band width (`lg:col-span-4` of a `lg:grid-cols-10`), the bar chart **60 %** (`lg:col-span-6`), per Stitch `<div class="grid lg:grid-cols-10 gap-6">`.
+8. **[done]** As an analyst, I want a click on a heatmap row's class label to **scroll the leading table** to the matching class row and highlight it for 1.5 s (no drilldown if the row has no `NR`).
 
 ### Statistik tab — enriched leading table
 
-1. **[offen]** As a spectator, I want a **Klassen-Führende** table with columns: Klasse, #, Fahrer / Team, Runden, Gap, Zeit gesamt, seit Runde, so that the leading slice of PID 9002 is immediately readable.
-2. **[offen]** As a developer, I want the **driver / team** column derived by joining `LEADING.NR` with `useLiveStore.snapshot.RESULT[*].STNR` (string match on the trimmed wire value), falling back to em-dash if no row found.
-3. **[offen]** As a fan, I want a click on the **#NR cell** to open the existing `<CarDrilldownDialog>` for that car number, so that I can immediately see lap-time chart and stints.
-4. **[offen]** As a power user, I want the table **sortable by Klasse, Runden, Gap, Zeit gesamt** via column header click, with a single sort key at a time.
-5. **[offen]** As a viewer, I want the table to inherit the **sticky header** + alternating zebra rows (`surface_container_low` / `_lowest`) defined in the design system, so density stays high.
-6. **[offen]** As a mobile user, I want each row collapsed to a **2-line card with a 2 px red left stripe**: line 1 = `«Klasse» · Runde N · «Gap»` (mono), line 2 = `#«NR»  «Fahrer / Team»`, with a chevron right hinting the drilldown.
+1. **[done]** As a spectator, I want a **Klassen-Führende** table with columns: Klasse, #, Fahrer / Team, Runden, Gap, Zeit gesamt, seit Runde, so that the leading slice of PID 9002 is immediately readable.
+2. **[done]** As a developer, I want the **driver / team** column derived by joining `LEADING.NR` with `useLiveStore.snapshot.RESULT[*].STNR` (string match on the trimmed wire value), falling back to em-dash if no row found.
+3. **[done]** As a fan, I want a click on the **#NR cell** to open the existing `<CarDrilldownDialog>` for that car number, so that I can immediately see lap-time chart and stints.
+4. **[done]** As a power user, I want the table **sortable by Klasse, Runden, Gap, Zeit gesamt** via column header click, with a single sort key at a time.
+5. **[done]** As a viewer, I want the table to inherit the **sticky header** + alternating zebra rows (`surface_container_low` / `_lowest`) defined in the design system, so density stays high.
+6. **[done]** As a mobile user, I want each row collapsed to a **2-line card with a 2 px red left stripe**: line 1 = `«Klasse» · Runde N · «Gap»` (mono), line 2 = `#«NR»  «Fahrer / Team»`, with a chevron right hinting the drilldown.
 
 ### Empty / loading / error states
 

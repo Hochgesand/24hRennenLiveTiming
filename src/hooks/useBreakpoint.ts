@@ -1,5 +1,7 @@
 import { useSyncExternalStore } from "react"
 
+import { subscribeMediaQueryChange } from "@/lib/mediaQuerySubscribe"
+
 export type Breakpoint = "mobile" | "tablet" | "desktop"
 
 const MOBILE_MAX = 767
@@ -22,13 +24,13 @@ function subscribe(onStoreChange: () => void): () => void {
   )
   const mqDesktop = window.matchMedia(`(min-width: ${TABLET_MAX + 1}px)`)
   const handler = () => onStoreChange()
-  mqMobile.addEventListener("change", handler)
-  mqTablet.addEventListener("change", handler)
-  mqDesktop.addEventListener("change", handler)
+  const unsubMobile = subscribeMediaQueryChange(mqMobile, handler)
+  const unsubTablet = subscribeMediaQueryChange(mqTablet, handler)
+  const unsubDesktop = subscribeMediaQueryChange(mqDesktop, handler)
   return () => {
-    mqMobile.removeEventListener("change", handler)
-    mqTablet.removeEventListener("change", handler)
-    mqDesktop.removeEventListener("change", handler)
+    unsubMobile()
+    unsubTablet()
+    unsubDesktop()
   }
 }
 

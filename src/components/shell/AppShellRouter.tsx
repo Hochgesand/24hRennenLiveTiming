@@ -5,6 +5,8 @@ import { MessagesPanel } from "@/components/MessagesPanel"
 import { AppShell } from "@/components/shell/AppShell"
 import { StatsSubTabs } from "@/components/shell/StatsSubTabs"
 import { BestLapPerClassChart } from "@/components/stats/BestLapPerClassChart"
+import { LeadingTable } from "@/components/stats/LeadingTable"
+import { SectorHeatmap } from "@/components/stats/SectorHeatmap"
 import { StatsClassFilter } from "@/components/stats/StatsClassFilter"
 import { StatsKpiStrip } from "@/components/stats/StatsKpiStrip"
 import { StatisticsPanel } from "@/components/StatisticsPanel"
@@ -50,7 +52,22 @@ export function AppShellRouter() {
           {bp !== "mobile" ? <StatsSubTabs /> : null}
           <StatsKpiStrip />
           <StatsClassFilter />
-          <BestLapPerClassChart />
+          {bp === "mobile" ? (
+            <>
+              <BestLapPerClassChart />
+              <SectorHeatmap />
+            </>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-10 gap-6">
+              <div className="lg:col-span-6">
+                <BestLapPerClassChart />
+              </div>
+              <div className="lg:col-span-4">
+                <SectorHeatmap />
+              </div>
+            </div>
+          )}
+          <LeadingTable />
           <StatisticsPanel />
         </div>
       ) : null}

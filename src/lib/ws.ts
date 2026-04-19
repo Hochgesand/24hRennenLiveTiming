@@ -6,7 +6,29 @@ import {
   isLtsTimesyncFrame,
 } from "@/lib/types"
 
+/** Public WSS URL (direct to Azure). Used in production and in tests. */
 export const LIVETIMING_WS_URL = "wss://livetiming.azurewebsites.net/"
+
+const LIVETIMING_PROXY_PATH = "/api/livetiming/"
+
+function defaultLiveTimingWsUrl(): string {
+  const fromEnv = import.meta.env.VITE_LIVETIMING_WS_URL as string | undefined
+  if (fromEnv && fromEnv.length > 0) {
+    return fromEnv
+  }
+  const optInProd = import.meta.env.VITE_USE_LIVETIMING_PROXY === "1"
+  const optOut = import.meta.env.VITE_USE_LIVETIMING_PROXY === "0"
+  const useProxy =
+    !optOut &&
+    import.meta.env.MODE !== "test" &&
+    (optInProd || import.meta.env.DEV) &&
+    typeof window !== "undefined"
+  if (useProxy) {
+    const proto = window.location.protocol === "https:" ? "wss" : "ws"
+    return `${proto}://${window.location.host}${LIVETIMING_PROXY_PATH}`
+  }
+  return LIVETIMING_WS_URL
+}
 
 export type LiveTimingHandlers = {
   onTimesync?: (msg: LtsTimesyncFrame) => void
@@ -40,7 +62,7 @@ export class LiveTimingClient {
   private readonly WebSocketImpl: typeof WebSocket
 
   constructor(options: LiveTimingClientOptions) {
-    this.url = options.url ?? LIVETIMING_WS_URL
+    this.url = options.url ?? defaultLiveTimingWsUrl()
     this.eventId = options.eventId
     this.eventPid = options.eventPid
     this.subscribeExtras = options.subscribeExtras
@@ -61,7 +83,20 @@ export class LiveTimingClient {
     }
     this.ws = null
     this.sawTimesync = false
-    const ws = new this.WebSocketImpl(this.url)
+
+    let ws: InstanceType<typeof this.WebSocketImpl>
+    try {
+      ws = new this.WebSocketImpl(this.url)
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : typeof err === "string"
+            ? err
+            : "websocket constructor failed"
+      handlers.onError?.(message)
+      return
+    }
     this.ws = ws
 
     ws.onopen = () => {

@@ -144,8 +144,10 @@ export function CarDrilldownDialog() {
 
   const isDesktop = breakpoint === "desktop"
   const dialogContentClass = cn(
+    // Cap height to viewport so centered dialog never clips; scroll inside panel
+    "max-h-[min(90vh,100dvh-2rem)] min-h-0 overflow-y-auto overscroll-contain",
     !isDesktop &&
-      "fixed right-0 bottom-0 left-0 top-auto max-h-[90vh] max-w-full translate-x-0 translate-y-0 overflow-y-auto rounded-t-xl rounded-b-none sm:max-w-full",
+      "fixed right-0 bottom-0 left-0 top-auto max-w-full translate-x-0 translate-y-0 rounded-t-xl rounded-b-none pb-[env(safe-area-inset-bottom,0px)] sm:max-w-full",
     isDesktop && "sm:max-w-5xl",
   )
 
