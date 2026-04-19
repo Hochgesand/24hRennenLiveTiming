@@ -8,11 +8,21 @@ import {
 import type { CSSProperties } from "react"
 import { Toaster as Sonner, type ToasterProps } from "sonner"
 
+import { useBreakpoint } from "@/hooks/useBreakpoint"
+
+const TOAST_DURATION_MS = 5000
+
 const Toaster = ({ ...props }: ToasterProps) => {
+  const bp = useBreakpoint()
+  const position: ToasterProps["position"] =
+    bp === "mobile" ? "top-center" : "bottom-right"
+
   return (
     <Sonner
       theme="dark"
       className="toaster group"
+      position={position}
+      duration={TOAST_DURATION_MS}
       icons={{
         success: <CircleCheckIcon className="size-4" />,
         info: <InfoIcon className="size-4" />,

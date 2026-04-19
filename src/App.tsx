@@ -6,6 +6,7 @@ import { SettingsDrawer } from "@/components/SettingsDrawer"
 import { AppShellRouter } from "@/components/shell/AppShellRouter"
 import { I18nProvider } from "@/i18n/I18nContext"
 import { useLiveConnection } from "@/hooks/useLiveConnection"
+import { useMessageToasts } from "@/hooks/useMessageToasts"
 import { useSyncFiltersFromUrl } from "@/hooks/useSyncFiltersFromUrl"
 import { useUrlConfig } from "@/hooks/useUrlConfig"
 import { isEventNotFoundError } from "@/lib/connectionError"
@@ -17,6 +18,7 @@ export default function App() {
 
   useLiveConnection()
   useSyncFiltersFromUrl()
+  useMessageToasts()
 
   useEffect(() => {
     document.documentElement.lang = lang === "en" ? "en" : "de"
