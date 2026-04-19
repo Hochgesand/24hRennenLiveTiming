@@ -1,6 +1,8 @@
 import { formatLapSeconds, parseLapTimeToSeconds } from "@/lib/lapTimes"
 import type {
+  Pid0Frame,
   Pid9002Frame,
+  RawResultRow,
   StatisticsBestLapRow,
   StatisticsBestSectorRow,
   StatisticsLeadingRow,
@@ -306,6 +308,52 @@ export type BestLapByClassRow = {
   opacityStop: BestLapOpacityStop
   /** Day-time string from BESTLAPS row (raw); null if missing. */
   dayTime: string | null
+  /**
+   * Joined driver / team string from the PID 0 RESULT row whose `STNR`
+   * (trimmed) equals the row's `NR` (trimmed). `null` when no snapshot is
+   * passed, when no RESULT row matches, or when the matched row carries
+   * neither a driver nor a team. See {@link composeDriverTeam} for the exact
+   * composition rule.
+   */
+  driverTeam: string | null
+}
+
+/**
+ * Compose the driver / team display string for a PID 0 `RESULT` row.
+ *
+ * Field choices (mirrors the existing project pattern in
+ * `src/components/Leaderboard.tsx`, `src/components/PodiumRibbon.tsx`,
+ * `src/components/drilldown/DrilldownHeader.tsx` and
+ * `src/components/CarDrilldownDialog.tsx`):
+ * - **Driver** = `RESULT.NAME` (trimmed). `NAME` is the canonical wire field
+ *   for the driver / driver-roster string in PID 0; explicit `DRIVER*`
+ *   columns are not present on this WIGE feed (verified Apr 2026).
+ * - **Team** = `RESULT.TEAM` (trimmed).
+ *
+ * Separator is " · " (middle dot, same glyph used by `DrilldownHeader` for
+ * `#NR · Driver`). Returns `null` when both sides are empty.
+ */
+export function composeDriverTeam(row: RawResultRow): string | null {
+  const driver = trimmedString(row.NAME)
+  const team = trimmedString(row.TEAM)
+  if (driver && team) return `${driver} · ${team}`
+  return driver || team || null
+}
+
+function buildResultIndexByStnr(
+  snapshot: Pid0Frame | null | undefined
+): Map<string, RawResultRow> {
+  const map = new Map<string, RawResultRow>()
+  if (!snapshot || !Array.isArray(snapshot.RESULT)) return map
+  for (const row of snapshot.RESULT) {
+    if (!row || typeof row !== "object") continue
+    const stnr = trimmedString(row.STNR)
+    if (!stnr) continue
+    if (!map.has(stnr)) {
+      map.set(stnr, row)
+    }
+  }
+  return map
 }
 
 function opacityStopForRank(rank: number): BestLapOpacityStop {
@@ -334,21 +382,31 @@ function opacityStopForRank(rank: number): BestLapOpacityStop {
  *   slow rows still render a visible nub.
  * - `opacityStop` maps by rank: 1→100, 2→80, 3→60, 4→40, anything else→20
  *   (per Stitch Fidelity Contract rule F7).
+ *
+ * The optional `snapshot` argument is the latest PID 0 frame
+ * (`useLiveStore.sessionMeta`). When provided, each row is enriched with a
+ * {@link BestLapByClassRow.driverTeam} string composed from the matching
+ * `RESULT` row whose trimmed `STNR` equals the BESTLAPS row's trimmed `NR`.
+ * When `null` / `undefined`, every `driverTeam` is `null`.
  */
 export function bestLapsByClass(
   stats: Pid9002Frame | null | undefined,
-  excludedStatsClasses: ReadonlySet<string> = new Set()
+  excludedStatsClasses: ReadonlySet<string> = new Set(),
+  snapshot: Pid0Frame | null | undefined = null
 ): BestLapByClassRow[] {
   const filtered = filterRowsByExcludedClasses(
     bestLapsArray(stats),
     excludedStatsClasses
   )
 
+  const resultIndex = buildResultIndexByStnr(snapshot)
+
   type Parsed = {
     classLabel: string
     carNumber: string
     seconds: number
     dayTime: string | null
+    driverTeam: string | null
   }
 
   const parsed: Parsed[] = []
@@ -367,11 +425,15 @@ export function bestLapsByClass(
     if (seconds === null || !Number.isFinite(seconds) || seconds <= 0) {
       continue
     }
+    const trimmedNr = trimmedString(row.NR)
+    const matched =
+      trimmedNr && resultIndex.size > 0 ? (resultIndex.get(trimmedNr) ?? null) : null
     parsed.push({
       classLabel,
-      carNumber: trimmedString(row.NR) ?? EM_DASH,
+      carNumber: trimmedNr ?? EM_DASH,
       seconds,
       dayTime: trimmedString(row.DAYTIME),
+      driverTeam: matched ? composeDriverTeam(matched) : null,
     })
   }
 
@@ -398,6 +460,7 @@ export function bestLapsByClass(
       widthPct,
       opacityStop: opacityStopForRank(rank),
       dayTime: row.dayTime,
+      driverTeam: row.driverTeam,
     }
   })
 }

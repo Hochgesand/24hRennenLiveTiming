@@ -102,6 +102,11 @@ export const STRINGS: Record<
     "stats.classFilter.toggleAria": "Klasse umschalten",
     "stats.classFilter.reset": "Zurücksetzen",
     "stats.classFilter.resetAria": "Klassenfilter zurücksetzen",
+    "stats.bestLap.title": "Beste Runde pro Klasse",
+    "stats.bestLap.titleMobileTop5": "Beste Runde pro Klasse — Top 5",
+    "stats.bestLap.ariaLabel": "Beste Runde pro Klasse",
+    "stats.bestLap.empty": "Keine Bestzeiten verfügbar",
+    "stats.bestLap.expand": "Mehr anzeigen ↓",
   },
   en: {
     "app.title": "Live timing",
@@ -202,6 +207,11 @@ export const STRINGS: Record<
     "stats.classFilter.toggleAria": "Toggle class",
     "stats.classFilter.reset": "Reset",
     "stats.classFilter.resetAria": "Reset class filter",
+    "stats.bestLap.title": "Best lap per class",
+    "stats.bestLap.titleMobileTop5": "Best lap per class — Top 5",
+    "stats.bestLap.ariaLabel": "Best lap per class",
+    "stats.bestLap.empty": "No best laps available",
+    "stats.bestLap.expand": "Show more ↓",
   },
 }
 

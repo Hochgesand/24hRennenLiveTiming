@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from "@testing-library/react"
+import { act, renderHook, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useLapsDataSubscription } from "./useLapsDataSubscription"
@@ -98,6 +98,10 @@ describe("useLapsDataSubscription", () => {
       }),
     )
 
+    await act(async () => {
+      await Promise.resolve()
+    })
+
     const ws = await flushOpen()
     expect(result.current.status).toBe("connecting")
 
@@ -107,13 +111,15 @@ describe("useLapsDataSubscription", () => {
     expect(open.session).toBe("4600101102")
     expect(open.startingNo).toBe("16")
 
-    ws.emitMessage(
-      JSON.stringify({
-        PID: "LTS_TIMESYNC",
-        clientLocalTime: 1,
-        serverLocalTime: 2,
-      }),
-    )
+    await act(async () => {
+      ws.emitMessage(
+        JSON.stringify({
+          PID: "LTS_TIMESYNC",
+          clientLocalTime: 1,
+          serverLocalTime: 2,
+        }),
+      )
+    })
 
     await waitFor(() => {
       expect(result.current.status).toBe("loading")
@@ -124,7 +130,9 @@ describe("useLapsDataSubscription", () => {
       SESSION: "4600101102",
       DATA: [{ L: "1", T: "8:12.345" }],
     }
-    ws.emitMessage(JSON.stringify(pid7))
+    await act(async () => {
+      ws.emitMessage(JSON.stringify(pid7))
+    })
 
     await waitFor(() => {
       expect(result.current.status).toBe("ready")
@@ -143,7 +151,9 @@ describe("useLapsDataSubscription", () => {
     )
 
     const ws = await flushOpen()
-    ws.emitMessage(JSON.stringify({ PID: "LTS_NOT_FOUND" }))
+    await act(async () => {
+      ws.emitMessage(JSON.stringify({ PID: "LTS_NOT_FOUND" }))
+    })
 
     await waitFor(() => {
       expect(result.current.status).toBe("error")

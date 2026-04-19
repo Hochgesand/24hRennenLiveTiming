@@ -2,7 +2,6 @@
 export * from "./types"
 export * from "./decode"
 export * from "./ws"
-export * from "./api"
 export * from "./lapTimes"
 export * from "./chg"
 export * from "./leaderboard"

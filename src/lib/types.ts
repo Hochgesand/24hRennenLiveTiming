@@ -8,8 +8,8 @@
  * | `0` | Leaderboard snapshot + session header (`RESULT`, `SESSION`, …). |
  * | `3` | Race control messages (`MESSAGES`). |
  * | `4` | Track / session clock (`TRACKSTATE`, `TIMESTATE`, `ENDTIME`, …). |
- * | `501` | Top qualifying (`PRO`, `PROAM`). |
  * | `7` | Per-car lap detail (`DATA[]` with `L`, `T`, sector keys). |
+ * | `501` | Top qualifying (`PRO`, `PROAM`). |
  * | `9002` | Statistics (`LEADING`, `BESTLAPS`, `BESTSECTORS`). |
  *
  * Use {@link LiveTimingPidFrame} for data frames; control frames are

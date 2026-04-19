@@ -254,7 +254,7 @@ Lap time band: 8:05.xxx – 8:25.xxx (Nordschleife full GP+24h layout). Sector s
 - **Stitch fidelity drift:** Stitch may regenerate layouts that drift from §3. Mitigation: use `edit_screens` with explicit prompts referencing this file's §3 each time.
 - **Tablet 2560×2048 legacy screen** — current "Tablet Timing Dashboard" is desktop-sized. Wave B step 2 corrects this.
 - **STQ data shape** — PRD references PID 501 but no fixture yet. Build with synthetic data, validate when first STQ session runs.
-- **WS Origin / CORS for REST `/laps-data`** — PRD flags need to verify. Track in #wire.
+- **WS Origin / CORS for REST `/laps-data`** — **Resolved:** `/event/.../laps-data` is the SPA shell (HTML), not a JSON API; lap detail uses WS `eventPid: [7]` with `session` / `startingNo` in the subscribe frame (`useLapsDataSubscription`).
 - **Recharts vs Chart.js** — PRD says Recharts. Stick with that.
 
 ---

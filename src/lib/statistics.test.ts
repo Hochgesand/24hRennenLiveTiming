@@ -4,11 +4,12 @@ import {
   availableStatClasses,
   bestLapsByClass,
   classKpis,
+  composeDriverTeam,
   filterRowsByExcludedClasses,
   formatDeltaSeconds,
   isStatsClassExcluded,
 } from "@/lib/statistics"
-import type { Pid9002Frame } from "@/lib/types"
+import type { Pid0Frame, Pid9002Frame, RawResultRow } from "@/lib/types"
 
 function frame(
   partial: Partial<Pid9002Frame>
@@ -17,6 +18,10 @@ function frame(
     PID: "9002",
     ...partial,
   } as Pid9002Frame
+}
+
+function snapshot(rows: RawResultRow[]): Pid0Frame {
+  return { PID: "0", RESULT: rows } as Pid0Frame
 }
 
 describe("classKpis", () => {
@@ -476,5 +481,96 @@ describe("bestLapsByClass", () => {
     const rows = bestLapsByClass(stats)
     expect(rows.map((r) => r.rank)).toEqual([1, 2, 3, 4, 5, 6])
     expect(rows.map((r) => r.opacityStop)).toEqual([100, 80, 60, 40, 20, 20])
+  })
+})
+
+describe("composeDriverTeam", () => {
+  it("joins NAME and TEAM with ` · ` when both are present", () => {
+    expect(
+      composeDriverTeam({ NAME: "Max Mustermann", TEAM: "Manthey EMA" })
+    ).toBe("Max Mustermann · Manthey EMA")
+  })
+
+  it("returns just the driver when TEAM is missing / blank", () => {
+    expect(composeDriverTeam({ NAME: "Max Mustermann" })).toBe("Max Mustermann")
+    expect(composeDriverTeam({ NAME: "Max Mustermann", TEAM: "" })).toBe(
+      "Max Mustermann"
+    )
+    expect(composeDriverTeam({ NAME: "Max Mustermann", TEAM: "   " })).toBe(
+      "Max Mustermann"
+    )
+  })
+
+  it("returns just the team when NAME is missing / blank", () => {
+    expect(composeDriverTeam({ TEAM: "Manthey EMA" })).toBe("Manthey EMA")
+    expect(composeDriverTeam({ NAME: "", TEAM: "Manthey EMA" })).toBe(
+      "Manthey EMA"
+    )
+  })
+
+  it("returns null when both NAME and TEAM are missing / blank", () => {
+    expect(composeDriverTeam({})).toBeNull()
+    expect(composeDriverTeam({ NAME: "", TEAM: "" })).toBeNull()
+    expect(composeDriverTeam({ NAME: "  ", TEAM: "  " })).toBeNull()
+  })
+
+  it("trims surrounding whitespace from both sides", () => {
+    expect(
+      composeDriverTeam({ NAME: "  Max Mustermann  ", TEAM: " Manthey EMA " })
+    ).toBe("Max Mustermann · Manthey EMA")
+  })
+})
+
+describe("bestLapsByClass — driverTeam join", () => {
+  const stats = frame({
+    BESTLAPS: [{ CLASS: "SP9", NR: "911", LAPTIME: "7:54.218" }],
+  })
+
+  it("returns driverTeam=null for every row when snapshot is null/undefined", () => {
+    const a = bestLapsByClass(stats, new Set(), null)
+    const b = bestLapsByClass(stats, new Set(), undefined)
+    const c = bestLapsByClass(stats)
+    expect(a[0]!.driverTeam).toBeNull()
+    expect(b[0]!.driverTeam).toBeNull()
+    expect(c[0]!.driverTeam).toBeNull()
+  })
+
+  it("composes `driver · team` when RESULT row has both driver and team", () => {
+    const snap = snapshot([
+      { STNR: "911", NAME: "Max Mustermann", TEAM: "Manthey EMA" },
+    ])
+    const rows = bestLapsByClass(stats, new Set(), snap)
+    expect(rows[0]!.driverTeam).toBe("Max Mustermann · Manthey EMA")
+  })
+
+  it("composes just the driver when RESULT row has only NAME", () => {
+    const snap = snapshot([{ STNR: "911", NAME: "Max Mustermann" }])
+    const rows = bestLapsByClass(stats, new Set(), snap)
+    expect(rows[0]!.driverTeam).toBe("Max Mustermann")
+  })
+
+  it("composes just the team when RESULT row has only TEAM", () => {
+    const snap = snapshot([{ STNR: "911", TEAM: "Manthey EMA" }])
+    const rows = bestLapsByClass(stats, new Set(), snap)
+    expect(rows[0]!.driverTeam).toBe("Manthey EMA")
+  })
+
+  it("returns driverTeam=null when no RESULT row's STNR matches the BESTLAPS NR", () => {
+    const snap = snapshot([
+      { STNR: "100", NAME: "Other Driver", TEAM: "Other Team" },
+    ])
+    const rows = bestLapsByClass(stats, new Set(), snap)
+    expect(rows[0]!.driverTeam).toBeNull()
+  })
+
+  it("trims STNR / NR before matching (whitespace differences must not break join)", () => {
+    const snap = snapshot([
+      { STNR: "  911 ", NAME: "Max Mustermann", TEAM: "Manthey EMA" },
+    ])
+    const statsWithSpace = frame({
+      BESTLAPS: [{ CLASS: "SP9", NR: " 911 ", LAPTIME: "7:54.218" }],
+    })
+    const rows = bestLapsByClass(statsWithSpace, new Set(), snap)
+    expect(rows[0]!.driverTeam).toBe("Max Mustermann · Manthey EMA")
   })
 })

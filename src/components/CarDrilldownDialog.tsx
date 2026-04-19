@@ -1,4 +1,3 @@
-import { useQuery } from "@tanstack/react-query"
 import { useMemo, useState } from "react"
 
 import {
@@ -14,8 +13,11 @@ import {
 } from "@/components/ui/dialog"
 import type { RawResultRow } from "@/domain"
 import { useBreakpoint } from "@/hooks/useBreakpoint"
+import {
+  type LapsStatus,
+  useLapsDataSubscription,
+} from "@/hooks/useLapsDataSubscription"
 import { useUrlConfig } from "@/hooks/useUrlConfig"
-import { getLapsData } from "@/lib/api"
 import { extractLapsFromExport } from "@/lib/lapExport"
 import { gapSeriesToLeader } from "@/lib/leaderDeltaSeries"
 import type { AverageMode } from "@/lib/lapTimes"
@@ -68,6 +70,10 @@ function leaderStartingNo(results: RawResultRow[] | undefined): string | null {
 
 const AVG_MODES: AverageMode[] = ["stint", "off", "last5", "last10", "last15"]
 
+function isLapsLoading(status: LapsStatus): boolean {
+  return status === "connecting" || status === "connected" || status === "loading"
+}
+
 export function CarDrilldownDialog() {
   const { eventId: eventIdFromUrl } = useUrlConfig()
   const breakpoint = useBreakpoint()
@@ -94,30 +100,35 @@ export function CarDrilldownDialog() {
 
   const canFetch = Boolean(open && eventId && session && stnrLabel)
 
-  const lapsQuery = useQuery({
-    queryKey: ["lapsData", eventId, session, stnrLabel],
-    queryFn: () => getLapsData(eventId!, session!, stnrLabel),
+  const lapsSub = useLapsDataSubscription({
+    eventId,
+    session,
+    startingNo: stnrLabel || null,
     enabled: canFetch,
-    staleTime: 60_000,
   })
 
-  const leaderLapsQuery = useQuery({
-    queryKey: ["lapsData", eventId, session, "leader", leaderStnr],
-    queryFn: () => getLapsData(eventId!, session!, leaderStnr!),
+  const leaderLapsSub = useLapsDataSubscription({
+    eventId,
+    session,
+    startingNo: leaderStnr,
     enabled: fetchLeader,
-    staleTime: 60_000,
   })
 
   const series =
-    canFetch && lapsQuery.isSuccess ? lapSeriesFromPayload(lapsQuery.data) : undefined
+    canFetch && lapsSub.payload != null
+      ? lapSeriesFromPayload(lapsSub.payload)
+      : undefined
 
   const leaderSeries =
-    fetchLeader && leaderLapsQuery.isSuccess
-      ? lapSeriesFromPayload(leaderLapsQuery.data)
+    fetchLeader && leaderLapsSub.payload != null
+      ? lapSeriesFromPayload(leaderLapsSub.payload)
       : null
 
-  const rawLaps =
-    canFetch && lapsQuery.isSuccess ? extractLapsFromExport(lapsQuery.data) : []
+  const rawLaps = useMemo(
+    () =>
+      canFetch && lapsSub.payload != null ? extractLapsFromExport(lapsSub.payload) : [],
+    [canFetch, lapsSub.payload],
+  )
 
   const stints = useMemo(() => deriveStintsFromLaps(rawLaps), [rawLaps])
 
@@ -173,26 +184,26 @@ export function CarDrilldownDialog() {
           </p>
         ) : null}
 
-        {canFetch && lapsQuery.isPending ? (
+        {canFetch && isLapsLoading(lapsSub.status) ? (
           <p className="text-muted-foreground text-sm" role="status">
             Loading lap data…
           </p>
         ) : null}
 
-        {canFetch && lapsQuery.isError ? (
+        {canFetch && lapsSub.status === "error" ? (
           <p className="text-destructive text-sm" role="alert">
-            {lapsQuery.error instanceof Error ? lapsQuery.error.message : "Failed to load laps"}
+            {lapsSub.error ?? "Failed to load laps"}
           </p>
         ) : null}
 
-        {canFetch && lapsQuery.isSuccess && series === null ? (
+        {canFetch && lapsSub.status === "ready" && series === null ? (
           <p className="text-muted-foreground text-sm" role="status">
             Could not parse lap data.
           </p>
         ) : null}
 
         {canFetch &&
-        lapsQuery.isSuccess &&
+        lapsSub.status === "ready" &&
         series !== undefined &&
         series !== null &&
         series.length === 0 ? (
@@ -201,17 +212,15 @@ export function CarDrilldownDialog() {
           </p>
         ) : null}
 
-        {fetchLeader && leaderLapsQuery.isPending ? (
+        {fetchLeader && isLapsLoading(leaderLapsSub.status) ? (
           <p className="text-muted-foreground text-sm" role="status">
             Loading leader lap data…
           </p>
         ) : null}
 
-        {fetchLeader && leaderLapsQuery.isError ? (
+        {fetchLeader && leaderLapsSub.status === "error" ? (
           <p className="text-destructive text-sm" role="alert">
-            {leaderLapsQuery.error instanceof Error
-              ? leaderLapsQuery.error.message
-              : "Failed to load leader laps"}
+            {leaderLapsSub.error ?? "Failed to load leader laps"}
           </p>
         ) : null}
 

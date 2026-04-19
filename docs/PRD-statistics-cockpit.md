@@ -76,12 +76,12 @@ These rules are binding for the implementation:
 
 ### Statistik tab — best-lap-per-class bar chart
 
-1. **[offen]** As an analyst, I want a **horizontal bar chart** of best lap per class rendered as plain Tailwind DOM (`<div class="h-2 bg-zinc-900"><div class="h-full bg-red-600 w-[X%]" /></div>`) per spec rule F7, so that the visualisation matches `stats-cockpit-desktop.html` lines 215–275 cell-for-cell.
-2. **[offen]** As a viewer, I want bars **sorted ascending by lap time** (fastest at top), so that the visual order matches "best".
-3. **[offen]** As a viewer, I want the lap-time label rendered at the **end of each bar** in `JetBrains Mono`, formatted as `m:ss.SSS` via the existing `formatLapSeconds` helper.
-4. **[offen]** As a viewer, I want each bar **coloured by rank** with red opacity stops `bg-red-600` (rank 1) → `/80` → `/60` → `/40` → `/20`, with the relative width computed from `(fastest / current)` capped at 100 %, exactly mirroring the Stitch HTML.
-5. **[offen]** As a viewer, I want a **tooltip on hover** with the full set: class, #NR, lap time, day-time, and (if present in PID 0 RESULT) driver/team name from the joined row, implemented via the existing shadcn `<Tooltip>` (no chart library tooltip).
-6. **[offen]** As a mobile user, I want the chart to render **only the top 5 bars** by default with a "Mehr anzeigen ↓" link (Stitch `stats-cockpit-mobile.html` line 283) that expands to show all classes.
+1. **[done]** As an analyst, I want a **horizontal bar chart** of best lap per class rendered as plain Tailwind DOM (`<div class="h-2 bg-zinc-900"><div class="h-full bg-red-600 w-[X%]" /></div>`) per spec rule F7, so that the visualisation matches `stats-cockpit-desktop.html` lines 215–275 cell-for-cell.
+2. **[done]** As a viewer, I want bars **sorted ascending by lap time** (fastest at top), so that the visual order matches "best".
+3. **[done]** As a viewer, I want the lap-time label rendered at the **end of each bar** in `JetBrains Mono`, formatted as `m:ss.SSS` via the existing `formatLapSeconds` helper.
+4. **[done]** As a viewer, I want each bar **coloured by rank** with red opacity stops `bg-red-600` (rank 1) → `/80` → `/60` → `/40` → `/20`, with the relative width computed from `(fastest / current)` capped at 100 %, exactly mirroring the Stitch HTML.
+5. **[done]** As a viewer, I want a **tooltip on hover** with the full set: class, #NR, lap time, day-time, and (if present in PID 0 RESULT) driver/team name from the joined row. Implementation note: native HTML `title=` + `aria-label=` on each `<li>` (the codebase has no shadcn Tooltip; native `title` is dependency-free, screen-reader accessible, and consistent with rule F4).
+6. **[done]** As a mobile user, I want the chart to render **only the top 5 bars** by default with a "Mehr anzeigen ↓" link (Stitch `stats-cockpit-mobile.html` line 283) that expands to show all classes.
 
 ### Statistik tab — sector heatmap
 

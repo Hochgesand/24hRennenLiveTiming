@@ -53,18 +53,22 @@ export function useLapsDataSubscription(args: {
       intentionalCloseRef.current = true
       clientRef.current?.close()
       clientRef.current = null
-      setStatus("idle")
-      setError(null)
-      setPayload(null)
       reconnectAttemptRef.current = 0
+      queueMicrotask(() => {
+        setStatus("idle")
+        setError(null)
+        setPayload(null)
+      })
       return
     }
 
     intentionalCloseRef.current = false
     reconnectAttemptRef.current = 0
-    setError(null)
-    setPayload(null)
-    setStatus("connecting")
+    queueMicrotask(() => {
+      setError(null)
+      setPayload(null)
+      setStatus("connecting")
+    })
 
     const client = new LiveTimingClient({
       eventId,

@@ -6,7 +6,7 @@ Als Motorsport-Fan/Analyst will ich die Live-Daten von `livetiming.azurewebsites
 
 ### Solution
 
-Eine clientseitige React-App (Vite + TS + Tailwind + shadcn/ui + Zustand). Sie verbindet sich per WebSocket zum bestehenden Live-Timing-Server, abonniert die noetigen PIDs (0, 3, 4, 501) mit einem rekonstruierten Open-Frame (`{eventId, eventPid, clientLocalTime}`), entkoppelt das Wire-Format ueber pure Decoder, hydriert einen Zustand-Store und rendert ein broadcast-orientiertes Layout. Pro-Auto Drilldown lae dt zusaetzlich Lap-Historie ueber den entdeckten REST-Endpoint `/event/{id}/laps-data`. URL-Parameter `?event=&config=` machen das Dashboard fuer beliebige Events wiederverwendbar.
+Eine clientseitige React-App (Vite + TS + Tailwind + shadcn/ui + Zustand). Sie verbindet sich per WebSocket zum bestehenden Live-Timing-Server, abonniert die noetigen PIDs (0, 3, 4, 501, 9002) mit einem rekonstruierten Open-Frame (`{eventId, eventPid, clientLocalTime}`), entkoppelt das Wire-Format ueber pure Decoder, hydriert einen Zustand-Store und rendert ein broadcast-orientiertes Layout. Pro-Auto Drilldown lae dt die Lap-Historie ueber ein separates WebSocket-Abonnement mit `eventPid: [7]` und Zusatzfeldern `session` / `startingNo` im Open-Frame (Payload `PID: "7"`, `DATA[]`). URL-Parameter `?event=&config=` machen das Dashboard fuer beliebige Events wiederverwendbar.
 
 ### User Stories
 
@@ -47,18 +47,18 @@ Eine clientseitige React-App (Vite + TS + Tailwind + shadcn/ui + Zustand). Sie v
 - **PID-Phasen-Maschine im Client:**
   1. erstes Frame muss `PID === "LTS_TIMESYNC"` sein -> berechnet `remoteTimeDiff = (now - serverLocalTime) + (now - clientLocalTime)/2`
   2. `PID === "LTS_NOT_FOUND"` -> Error-Callback `event not found`
-  3. danach Datenframes (`"0"`, `"3"`, `"4"`, `"501"`, `"9002"`) als komplette Snapshots
+  3. danach Datenframes (`"0"`, `"3"`, `"4"`, `"501"`, `"9002"`, `"7"` im Lap-Drilldown) als komplette Snapshots
 - **Multi-PID-Multiplex:** ein WS pro PID-Set; UI-Stores teilen sich denselben Client wenn moeglich (Observer-Count-Pattern wie im Original).
 - **Reconnect:** exponential-backoff bis `maxAttempts`, Skip bei Close-Codes 1000/1001/1005.
 - **Decode-Modul:** **pure Funktionen** `decodeStatusCode(code: string|number): SectorStatus` und `decodeResultRow(raw: RawResult): ResultRow`; **keine Mutation, keine Seiteneffekte**. Status-Enum: `personalBest|sessionBest|overallBest|pit|inLap|outLap|invalid|normal`.
 - **Store (Zustand):** Slices `connection`, `session`, `track`, `results`, `messages`, `topQualifying`. Setter werden vom WS-Client per Callback aufgerufen, niemals direkt von Komponenten.
-- **REST API:** `getLapsData(eventId, session, startingNo) -> LapHistory[]`. Cache ueber tanstack-query; Refetch nicht aggressiv (manuelles Trigger pro Drilldown).
+- **Lap-Detail (Drilldown):** eigenes WS mit `eventPid: [7]`, Open-Frame inkl. `session` und `startingNo`; Hook `useLapsDataSubscription` liefert `Pid7Frame` / `DATA[]` fuer Charts und Matrix.
 - **Architektur-Schichten:**
-  - Wire (`lib/ws.ts`, `lib/api.ts`) — kennt nur Server-Format
+  - Wire (`lib/ws.ts`) — kennt nur Server-Format
   - Decode (`lib/decode.ts`) — pure, formenwandelt Wire -> Domain
   - Store (`store/useLiveStore.ts`) — haelt Domain-State, hat keinen Server-Bezug
   - View (`components/`*) — liest nur aus Store, ist "dumb"
-- **CORS:** WS hat keine Origin-Restriction (in Test reproduziert); REST muss verifiziert werden — fallback Proxy nur falls noetig.
+- **CORS:** WS hat keine Origin-Restriction (in Test reproduziert). Lap-Daten laufen wie die uebrigen Features ueber WS (`PID 7`), nicht ueber die SPA-Route `/event/.../laps-data` (kein JSON-REST).
 - **Theme:** Dark per Default, Tokens aus Stitch-Design (siehe Kapitel 4) als CSS-Variablen.
 - **Resilienz:** App rendert mit leerem Snapshot Skeleton; Fehler-Toasts (shadcn `sonner`) bei `onError`.
 
@@ -87,7 +87,7 @@ Prior Art / Inspiration:
 - Andere Live-Timing-Provider als `livetiming.azurewebsites.net`.
 - Audio-Kommentar / Push-Notifications.
 - i18n jenseits von Deutsch/Englisch (Strings kommen teils direkt vom Server).
-- Aufzeichnung kompletter Sessions im Browser (nur On-Demand `laps-data`-Fetch im Drilldown).
+- Aufzeichnung kompletter Sessions im Browser (nur On-Demand Lap-Abonnement im Drilldown).
 
 ### Further Notes
 

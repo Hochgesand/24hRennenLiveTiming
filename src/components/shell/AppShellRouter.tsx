@@ -4,6 +4,7 @@ import { Leaderboard } from "@/components/Leaderboard"
 import { MessagesPanel } from "@/components/MessagesPanel"
 import { AppShell } from "@/components/shell/AppShell"
 import { StatsSubTabs } from "@/components/shell/StatsSubTabs"
+import { BestLapPerClassChart } from "@/components/stats/BestLapPerClassChart"
 import { StatsClassFilter } from "@/components/stats/StatsClassFilter"
 import { StatsKpiStrip } from "@/components/stats/StatsKpiStrip"
 import { StatisticsPanel } from "@/components/StatisticsPanel"
@@ -49,6 +50,7 @@ export function AppShellRouter() {
           {bp !== "mobile" ? <StatsSubTabs /> : null}
           <StatsKpiStrip />
           <StatsClassFilter />
+          <BestLapPerClassChart />
           <StatisticsPanel />
         </div>
       ) : null}
