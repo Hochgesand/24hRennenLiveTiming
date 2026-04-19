@@ -149,6 +149,7 @@ export function CarDrilldownDialog() {
     >
       <DialogContent className={dialogContentClass} showCloseButton>
         <DrilldownHeader
+          row={row}
           name={name}
           startingNo={stnrLabel}
           session={session}

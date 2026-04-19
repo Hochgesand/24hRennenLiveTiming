@@ -1,4 +1,4 @@
-import { useEffect } from "react"
+import { useCallback, useEffect, useState, type UIEvent } from "react"
 
 import { ConnectionBanner } from "@/components/ConnectionBanner"
 import { Leaderboard } from "@/components/Leaderboard"
@@ -9,6 +9,7 @@ import { StatisticsPanel } from "@/components/StatisticsPanel"
 import { TopQualifyingPanel } from "@/components/TopQualifyingPanel"
 import { TrackMapPanel } from "@/components/TrackMapPanel"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useBreakpoint } from "@/hooks/useBreakpoint"
 import type { AppTab } from "@/hooks/useUrlConfig"
 import { useUrlConfig } from "@/hooks/useUrlConfig"
 import { setUrlTab } from "@/hooks/useUrlNavigation"
@@ -19,9 +20,28 @@ import { useUiStore } from "@/store/useUiStore"
 export function DashboardShell() {
   const { t } = useI18n()
   const tab = useUrlConfig().tab
+  const bp = useBreakpoint()
+  const [podiumTwoRow, setPodiumTwoRow] = useState(false)
   const sessionMeta = useLiveStore((s) => s.sessionMeta)
   const stqVisible = Boolean(sessionMeta?.STQ)
   const setSettingsDrawerOpen = useUiStore((s) => s.setSettingsDrawerOpen)
+
+  const onTabPanelScroll = useCallback(
+    (e: UIEvent<HTMLDivElement>) => {
+      if (bp !== "tablet") {
+        setPodiumTwoRow(false)
+        return
+      }
+      setPodiumTwoRow(e.currentTarget.scrollTop > 36)
+    },
+    [bp]
+  )
+
+  useEffect(() => {
+    if (bp !== "tablet") {
+      setPodiumTwoRow(false)
+    }
+  }, [bp])
 
   useEffect(() => {
     if (tab === "stq" && !stqVisible) {
@@ -50,7 +70,7 @@ export function DashboardShell() {
     <div className="text-foreground flex min-h-svh min-w-0 flex-col">
       <SessionHeader />
       <ConnectionBanner />
-      <PodiumRibbon />
+      <PodiumRibbon twoRowCompact={podiumTwoRow} />
       <main className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 bg-[#181c21]/80 p-4">
         <Tabs
           value={displayTab}
@@ -66,24 +86,28 @@ export function DashboardShell() {
           </TabsList>
           <TabsContent
             value="leaderboard"
+            onScroll={onTabPanelScroll}
             className="mt-0 flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-auto data-[state=inactive]:hidden"
           >
             <Leaderboard />
           </TabsContent>
           <TabsContent
             value="stats"
+            onScroll={onTabPanelScroll}
             className="mt-0 flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-auto data-[state=inactive]:hidden"
           >
             <StatisticsPanel />
           </TabsContent>
           <TabsContent
             value="messages"
+            onScroll={onTabPanelScroll}
             className="mt-0 flex min-h-0 min-w-0 flex-1 flex-col overflow-auto data-[state=inactive]:hidden"
           >
             <MessagesPanel />
           </TabsContent>
           <TabsContent
             value="trackmap"
+            onScroll={onTabPanelScroll}
             className="mt-0 flex min-h-0 min-w-0 flex-1 flex-col overflow-auto data-[state=inactive]:hidden"
           >
             <TrackMapPanel />
@@ -91,6 +115,7 @@ export function DashboardShell() {
           {stqVisible ? (
             <TabsContent
               value="stq"
+              onScroll={onTabPanelScroll}
               className="mt-0 flex min-h-0 min-w-0 flex-1 flex-col overflow-auto data-[state=inactive]:hidden"
             >
               <TopQualifyingPanel />

@@ -52,9 +52,11 @@ function ChgIndicator({ row }: { row: RawResultRow }) {
 function RibbonCard({
   row,
   place,
+  dense,
 }: {
   row: RawResultRow
   place: 1 | 2 | 3
+  dense?: boolean
 }) {
   const name = str(row.NAME) || "—"
   const team = str(row.TEAM)
@@ -64,6 +66,7 @@ function RibbonCard({
     <div
       className={cn(
         "flex min-w-0 max-w-[10rem] flex-1 flex-col rounded-lg border border-white/[0.08] bg-[#1c2025] px-2.5 py-2",
+        dense && "max-w-[9rem] px-2 py-1.5",
         place === 1 && "border-amber-400/35 shadow-[0_0_20px_rgba(34,211,238,0.12)]"
       )}
     >
@@ -80,25 +83,50 @@ function RibbonCard({
         </span>
         <ChgIndicator row={row} />
       </div>
-      <p className="truncate text-xs font-semibold leading-tight" title={name}>
+      <p
+        className={cn("truncate font-semibold leading-tight", dense ? "text-[11px]" : "text-xs")}
+        title={name}
+      >
         {name}
       </p>
       {team ? (
-        <p className="text-muted-foreground truncate text-[10px] leading-tight" title={team}>
+        <p
+          className={cn(
+            "text-muted-foreground truncate leading-tight",
+            dense ? "text-[9px]" : "text-[10px]",
+          )}
+          title={team}
+        >
           {team}
         </p>
       ) : null}
-      <p className="text-muted-foreground truncate font-mono text-[10px]" title={car || undefined}>
+      <p
+        className={cn(
+          "text-muted-foreground truncate font-mono",
+          dense ? "text-[9px]" : "text-[10px]",
+        )}
+        title={car || undefined}
+      >
         {car || "—"}
       </p>
-      <p className="text-muted-foreground mt-0.5 font-mono text-[10px] tabular-nums">
+      <p
+        className={cn(
+          "text-muted-foreground mt-0.5 font-mono tabular-nums",
+          dense ? "text-[9px]" : "text-[10px]",
+        )}
+      >
         {gapLabel(row, place)}
       </p>
     </div>
   )
 }
 
-export function PodiumRibbon() {
+export type PodiumRibbonProps = {
+  /** Tablet: after scrolling the tab panel, switch to a 2-row layout (PRD §3.2). */
+  twoRowCompact?: boolean
+}
+
+export function PodiumRibbon({ twoRowCompact = false }: PodiumRibbonProps) {
   const sessionMeta = useLiveStore((s) => s.sessionMeta)
   const results = sessionMeta?.RESULT
 
@@ -109,6 +137,29 @@ export function PodiumRibbon() {
   const [p1, p2, p3] = getPodiumRows(results)
   if (!p1 && !p2 && !p3) {
     return null
+  }
+
+  const dense = twoRowCompact
+
+  if (twoRowCompact) {
+    return (
+      <section
+        className="border-border shrink-0 border-b px-3 py-2 sm:px-4"
+        aria-label="Podium top three"
+      >
+        <div className="mx-auto grid w-full max-w-xl grid-cols-2 gap-2">
+          <div className="flex justify-end">
+            {p2 ? <RibbonCard row={p2} place={2} dense={dense} /> : <div />}
+          </div>
+          <div className="flex justify-start">
+            {p1 ? <RibbonCard row={p1} place={1} dense={dense} /> : null}
+          </div>
+          <div className="col-span-2 flex justify-center">
+            {p3 ? <RibbonCard row={p3} place={3} dense={dense} /> : null}
+          </div>
+        </div>
+      </section>
+    )
   }
 
   return (
