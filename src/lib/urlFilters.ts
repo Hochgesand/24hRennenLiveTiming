@@ -1,7 +1,14 @@
+import {
+  allLeaderboardColumnKeysForUrl,
+  defaultExcludedLeaderboardColumns,
+} from "@/lib/leaderboardColumns"
+
 /** Short query keys for shareable filter state (coexist with `event`, `config`). */
 export const PARAM_EXC_CLASS = "excClass"
 export const PARAM_EXC_PRO = "excPro"
 export const PARAM_EXC_COL = "excCol"
+/** Comma-separated whitelist of visible column keys (overrides `excCol` when present). */
+export const PARAM_COLS = "cols"
 
 export type FilterUrlState = {
   excludedClasses: Set<string>
@@ -39,13 +46,48 @@ function excludedColumnsFromParams(params: URLSearchParams): Set<string> {
   return new Set(merged)
 }
 
+function defaultVisibleColumnSet(): Set<string> {
+  const all = allLeaderboardColumnKeysForUrl()
+  const ex = defaultExcludedLeaderboardColumns()
+  return new Set(all.filter((k) => !ex.has(k)))
+}
+
+function excludedColumnsFromColsParam(params: URLSearchParams): Set<string> | null {
+  if (!params.has(PARAM_COLS)) {
+    return null
+  }
+  const raw = params.get(PARAM_COLS)
+  const visible = new Set(
+    splitCommaParam(raw).map((k) => k.toLowerCase())
+  )
+  const all = allLeaderboardColumnKeysForUrl()
+  const excluded = new Set<string>()
+  for (const k of all) {
+    if (!visible.has(k)) {
+      excluded.add(k)
+    }
+  }
+  return excluded
+}
+
+function excludedColumnsResolved(params: URLSearchParams): Set<string> {
+  const fromCols = excludedColumnsFromColsParam(params)
+  if (fromCols !== null) {
+    return fromCols
+  }
+  if (params.has(PARAM_EXC_COL)) {
+    return excludedColumnsFromParams(params)
+  }
+  return defaultExcludedLeaderboardColumns()
+}
+
 export function parseFilterParamsFromSearch(search: string): FilterUrlState {
   const q = search.startsWith("?") ? search.slice(1) : search
   const params = new URLSearchParams(q)
   return {
     excludedClasses: excludedClassesFromParams(params),
     excludedProams: excludedProamsFromParams(params),
-    excludedColumns: excludedColumnsFromParams(params),
+    excludedColumns: excludedColumnsResolved(params),
   }
 }
 
@@ -69,6 +111,11 @@ export function filterUrlStateEqual(a: FilterUrlState, b: FilterUrlState): boole
   )
 }
 
+function visibleColumnsFromExcluded(excluded: Set<string>): Set<string> {
+  const all = allLeaderboardColumnKeysForUrl()
+  return new Set(all.filter((k) => !excluded.has(k)))
+}
+
 /** Mutates `params`: sets/removes filter keys only. Leaves `event`, `config`, etc. */
 export function applyFilterStateToSearchParams(
   params: URLSearchParams,
@@ -83,7 +130,16 @@ export function applyFilterStateToSearchParams(
   }
   setOrDelete(PARAM_EXC_CLASS, state.excludedClasses)
   setOrDelete(PARAM_EXC_PRO, state.excludedProams)
-  setOrDelete(PARAM_EXC_COL, state.excludedColumns)
+
+  const visible = visibleColumnsFromExcluded(state.excludedColumns)
+  const defaultVisible = defaultVisibleColumnSet()
+  if (setsEqual(visible, defaultVisible)) {
+    params.delete(PARAM_COLS)
+    params.delete(PARAM_EXC_COL)
+  } else {
+    params.set(PARAM_COLS, joinCommaSorted(visible))
+    params.delete(PARAM_EXC_COL)
+  }
 }
 
 /** Returns full `?a=b` search string (or `""` when no params remain). */

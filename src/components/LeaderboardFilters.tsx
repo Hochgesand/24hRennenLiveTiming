@@ -11,8 +11,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { LEADERBOARD_BASE_COLUMNS, sectorColumnKey } from "@/lib/leaderboardColumns"
+import { ALL_LEADERBOARD_COLUMN_DEFS, sectorColumnKey } from "@/lib/leaderboardColumns"
 import type { RawResultRow } from "@/domain"
+import { useI18n } from "@/i18n/I18nContext"
 import { useFilterStore } from "@/store/useFilterStore"
 function str(v: unknown): string {
   if (v === undefined || v === null) {
@@ -45,6 +46,7 @@ export function LeaderboardFilters({
   const clearExcludedClasses = useFilterStore((s) => s.clearExcludedClasses)
   const clearExcludedProams = useFilterStore((s) => s.clearExcludedProams)
   const clearExcludedColumns = useFilterStore((s) => s.clearExcludedColumns)
+  const { t } = useI18n()
 
   const classNames = useMemo(
     () => uniqueSorted(sourceRows.map((r) => str(r.CLASSNAME))),
@@ -88,7 +90,7 @@ export function LeaderboardFilters({
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm" className="gap-1">
-              Classes
+              {t("filters.classes")}
               {excludedClasses.size > 0 ? (
                 <span className="bg-muted text-muted-foreground rounded px-1.5 py-0.5 text-xs tabular-nums">
                   {excludedClasses.size}
@@ -98,7 +100,7 @@ export function LeaderboardFilters({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-56">
-            <DropdownMenuLabel>Classes</DropdownMenuLabel>
+            <DropdownMenuLabel>{t("filters.classes")}</DropdownMenuLabel>
             <DropdownMenuSeparator />
             {classNames.map((c) => (
               <DropdownMenuCheckboxItem
@@ -115,7 +117,7 @@ export function LeaderboardFilters({
               </DropdownMenuCheckboxItem>
             ))}
             <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={clearExcludedClasses}>All classes</DropdownMenuItem>
+            <DropdownMenuItem onSelect={clearExcludedClasses}>{t("filters.allClasses")}</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       ) : null}
@@ -124,7 +126,7 @@ export function LeaderboardFilters({
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm" className="gap-1">
-              Pro / Am
+              {t("filters.proam")}
               {excludedProams.size > 0 ? (
                 <span className="bg-muted text-muted-foreground rounded px-1.5 py-0.5 text-xs tabular-nums">
                   {excludedProams.size}
@@ -134,7 +136,7 @@ export function LeaderboardFilters({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-56">
-            <DropdownMenuLabel>Pro / Am</DropdownMenuLabel>
+            <DropdownMenuLabel>{t("filters.proam")}</DropdownMenuLabel>
             <DropdownMenuSeparator />
             {proKeys.map((p) => (
               <DropdownMenuCheckboxItem
@@ -151,7 +153,7 @@ export function LeaderboardFilters({
               </DropdownMenuCheckboxItem>
             ))}
             <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={clearExcludedProams}>All Pro / Am</DropdownMenuItem>
+            <DropdownMenuItem onSelect={clearExcludedProams}>{t("filters.allProam")}</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       ) : null}
@@ -176,7 +178,7 @@ export function LeaderboardFilters({
             clearExcludedColumns()
           }}
         >
-          All
+          {t("filters.all")}
         </Button>
       ) : null}
     </div>
@@ -196,11 +198,12 @@ function ColumnVisibilityMenu({
   sectorColumnEntries: { key: string; label: string }[]
   anyColumnHidden: boolean
 }) {
+  const { t } = useI18n()
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="outline" size="sm" className="gap-1">
-          Columns
+          {t("filters.columns")}
           {anyColumnHidden ? (
             <span className="bg-muted text-muted-foreground rounded px-1.5 py-0.5 text-xs tabular-nums">
               {excludedColumns.size}
@@ -210,9 +213,9 @@ function ColumnVisibilityMenu({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="max-h-[min(24rem,70vh)] w-56 overflow-y-auto">
-        <DropdownMenuLabel>Columns</DropdownMenuLabel>
+        <DropdownMenuLabel>{t("filters.columns")}</DropdownMenuLabel>
         <DropdownMenuSeparator />
-        {LEADERBOARD_BASE_COLUMNS.map(({ key, label }) => (
+        {ALL_LEADERBOARD_COLUMN_DEFS.map(({ key, labelKey }) => (
           <DropdownMenuCheckboxItem
             key={`col-${key}`}
             checked={!excludedColumns.has(key)}
@@ -223,7 +226,7 @@ function ColumnVisibilityMenu({
               }
             }}
           >
-            {label}
+            {t(labelKey)}
           </DropdownMenuCheckboxItem>
         ))}
         {sectorColumnEntries.length > 0 ? (
@@ -246,7 +249,7 @@ function ColumnVisibilityMenu({
           </>
         ) : null}
         <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={clearExcludedColumns}>All columns</DropdownMenuItem>
+        <DropdownMenuItem onSelect={clearExcludedColumns}>{t("filters.allColumns")}</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )

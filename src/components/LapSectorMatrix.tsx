@@ -1,3 +1,5 @@
+import { SectorCell } from "@/components/SectorCell"
+import { decodeLapStatus, type WireScalar } from "@/domain"
 import {
   hasPerSectorSplits,
   lapNumberLabel,
@@ -9,6 +11,14 @@ const SECTOR_INDICES = [1, 2, 3, 4, 5, 6, 7, 8, 9] as const
 
 type LapSectorMatrixProps = {
   laps: RawLapRow[]
+}
+
+function sectorStatus(row: RawLapRow, n: number) {
+  const key = `ST${n}T`
+  if (!(key in row)) {
+    return undefined
+  }
+  return decodeLapStatus(row[key] as WireScalar | undefined)
 }
 
 export function LapSectorMatrix({ laps }: LapSectorMatrixProps) {
@@ -47,9 +57,14 @@ export function LapSectorMatrix({ laps }: LapSectorMatrixProps) {
               </td>
               {SECTOR_INDICES.map((n) => {
                 const v = sectorSplitCell(row, n)
+                const st = sectorStatus(row, n)
                 return (
                   <td key={n} className="px-1.5 py-1 tabular-nums">
-                    {v || "—"}
+                    {st !== undefined ? (
+                      <SectorCell time={v || "—"} status={st} />
+                    ) : (
+                      v || "—"
+                    )}
                   </td>
                 )
               })}

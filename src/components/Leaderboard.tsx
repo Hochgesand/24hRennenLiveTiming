@@ -3,13 +3,18 @@ import { ArrowDown, ArrowUp } from "lucide-react"
 import { parseChg } from "@/lib/chg"
 import { decodeLapStatus } from "@/domain"
 import { sectorColumnKey } from "@/lib/leaderboardColumns"
-import { filterLeaderboardRowsByExclusions, sortLeaderboardRows } from "@/lib/leaderboard"
+import {
+  computeMaxSectors,
+  filterLeaderboardRowsByExclusions,
+  sortLeaderboardRows,
+} from "@/lib/leaderboard"
 import type { RawResultRow } from "@/domain"
 import { cn } from "@/lib/utils"
 import { useFilterStore } from "@/store/useFilterStore"
 import { useLiveStore } from "@/store/useLiveStore"
 import { useUiStore } from "@/store/useUiStore"
 
+import { DataNumeric } from "./DataNumeric"
 import { LeaderboardFilters } from "./LeaderboardFilters"
 import { SectorCell } from "./SectorCell"
 
@@ -29,20 +34,15 @@ function timeCell(row: RawResultRow, key: keyof RawResultRow): string {
   return cell(row[key])
 }
 
-function hasSectorTimeValue(v: unknown): boolean {
-  return str(v) !== ""
-}
-
-/** Highest sector index (1–9) where any row has a non-empty `S{n}TIME`. */
-function computeMaxSectors(rows: RawResultRow[]): number {
-  let max = 0
-  for (let n = 1; n <= 9; n++) {
-    const key = `S${n}TIME` as keyof RawResultRow
-    if (rows.some((r) => hasSectorTimeValue(r[key]))) {
-      max = n
+/** First non-empty trimmed string from wire keys (defensive aliases). */
+function wireStr(row: RawResultRow, ...keys: string[]): string {
+  for (const k of keys) {
+    const s = str(row[k])
+    if (s) {
+      return s
     }
   }
-  return max
+  return ""
 }
 
 function positionCellAriaLabel(row: RawResultRow): string {
@@ -131,6 +131,18 @@ export function Leaderboard() {
               {!colHidden("car") ? (
                 <th className="px-3 py-2 font-medium">Car</th>
               ) : null}
+              {!colHidden("pit") ? (
+                <th className="px-3 py-2 text-right font-medium">Pit</th>
+              ) : null}
+              {!colHidden("stint") ? (
+                <th className="px-3 py-2 font-medium">Stint</th>
+              ) : null}
+              {!colHidden("tire") ? (
+                <th className="px-3 py-2 font-medium">Tire</th>
+              ) : null}
+              {!colHidden("bestclass") ? (
+                <th className="px-3 py-2 font-medium">Best class</th>
+              ) : null}
               {!colHidden("gap") ? (
                 <th className="px-3 py-2 text-right font-medium">Gap</th>
               ) : null}
@@ -213,7 +225,23 @@ export function Leaderboard() {
                     <td className="px-3 py-1.5">{cell(row.CLASSNAME)}</td>
                   ) : null}
                   {!colHidden("driver") ? (
-                    <td className="px-3 py-1.5">{cell(row.NAME)}</td>
+                    <td className="px-3 py-1.5">
+                      {!colHidden("team") ? (
+                        cell(row.NAME)
+                      ) : (
+                        <div className="flex max-w-[14rem] flex-col gap-0.5">
+                          <span className="truncate">{cell(row.NAME)}</span>
+                          {team ? (
+                            <span
+                              className="text-muted-foreground truncate text-xs"
+                              title={team}
+                            >
+                              {team}
+                            </span>
+                          ) : null}
+                        </div>
+                      )}
+                    </td>
                   ) : null}
                   {!colHidden("team") ? (
                     <td
@@ -231,22 +259,38 @@ export function Leaderboard() {
                       {cell(row.CAR)}
                     </td>
                   ) : null}
+                  {!colHidden("pit") ? (
+                    <td className="px-3 py-1.5 text-right tabular-nums">
+                      {cell(wireStr(row, "PITCNT", "PITCOUNT"))}
+                    </td>
+                  ) : null}
+                  {!colHidden("stint") ? (
+                    <td className="px-3 py-1.5">{cell(wireStr(row, "STINT"))}</td>
+                  ) : null}
+                  {!colHidden("tire") ? (
+                    <td className="px-3 py-1.5">{cell(wireStr(row, "TIRE"))}</td>
+                  ) : null}
+                  {!colHidden("bestclass") ? (
+                    <td className="px-3 py-1.5">{cell(wireStr(row, "BOFC", "BESTCLASS"))}</td>
+                  ) : null}
                   {!colHidden("gap") ? (
-                    <td className="px-3 py-1.5 text-right font-mono text-sm tabular-nums">
-                      {cell(row.GAP)}
+                    <td className="px-3 py-1.5 text-right">
+                      <DataNumeric value={row.GAP} kind="gap" />
                     </td>
                   ) : null}
                   {!colHidden("last") ? (
                     <td className="px-3 py-1.5 text-right">
-                      <SectorCell
-                        time={timeCell(row, "LASTLAPTIME")}
-                        status={decodeLapStatus(row.LLTS)}
-                      />
+                      <SectorCell status={decodeLapStatus(row.LLTS)}>
+                        <DataNumeric value={row.LASTLAPTIME} kind="lapTime" />
+                      </SectorCell>
                     </td>
                   ) : null}
                   {!colHidden("fast") ? (
-                    <td className="px-3 py-1.5 text-right font-mono text-sm tabular-nums">
-                      {timeCell(row, "FASTESTLAP")}
+                    <td className="px-3 py-1.5 text-right">
+                      <DataNumeric
+                        value={(wireStr(row, "FASTESTLAP", "FLTS") || row.FASTESTLAP) ?? row.FLTS}
+                        kind="lapTime"
+                      />
                     </td>
                   ) : null}
                   {maxSectors > 0

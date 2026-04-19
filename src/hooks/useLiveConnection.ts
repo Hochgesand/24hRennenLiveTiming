@@ -41,7 +41,7 @@ export function useLiveConnection(): { missingEvent: boolean } {
       setMessages(null)
       setTopQualifying(null)
       setStatistics(null)
-      setConnection({ status: "idle", error: null })
+      setConnection({ status: "idle", error: null, reconnecting: false })
       return
     }
 
@@ -57,7 +57,7 @@ export function useLiveConnection(): { missingEvent: boolean } {
     setMessages(null)
     setTopQualifying(null)
     setStatistics(null)
-    setConnection({ status: "connecting", error: null })
+    setConnection({ status: "connecting", error: null, reconnecting: false })
 
     const client = new LiveTimingClient({
       eventId,
@@ -70,7 +70,7 @@ export function useLiveConnection(): { missingEvent: boolean } {
       reconnectTimerRef.current = window.setTimeout(() => {
         reconnectTimerRef.current = null
         if (intentionalCloseRef.current) return
-        setConnection({ status: "connecting", error: null })
+        setConnection({ status: "connecting", error: null, reconnecting: true })
         client.connect(buildHandlers())
       }, delayMs)
     }
@@ -82,7 +82,7 @@ export function useLiveConnection(): { missingEvent: boolean } {
         setRemoteTimeDiffMs(
           computeRemoteTimeDiff(now, msg.clientLocalTime, msg.serverLocalTime),
         )
-        setConnection({ status: "connected", error: null })
+        setConnection({ status: "connected", error: null, reconnecting: false })
       },
       onJson: (msg) => {
         if (isPid0Frame(msg)) {
@@ -99,10 +99,10 @@ export function useLiveConnection(): { missingEvent: boolean } {
       },
       onError: (message) => {
         if (message === "websocket error") {
-          setConnection({ status: "connecting", error: null })
+          setConnection({ status: "connecting", error: null, reconnecting: false })
           return
         }
-        setConnection({ status: "error", error: message })
+        setConnection({ status: "error", error: message, reconnecting: false })
         intentionalCloseRef.current = true
         client.close()
       },
@@ -112,12 +112,16 @@ export function useLiveConnection(): { missingEvent: boolean } {
           return
         }
         if (isCleanDisconnect(ev.code)) {
-          setConnection({ status: "closed", error: null })
+          setConnection({ status: "closed", error: null, reconnecting: false })
           return
         }
         reconnectAttemptRef.current += 1
         if (reconnectAttemptRef.current > MAX_RECONNECT_ATTEMPTS) {
-          setConnection({ status: "error", error: "Max reconnect attempts" })
+          setConnection({
+            status: "error",
+            error: "Max reconnect attempts",
+            reconnecting: false,
+          })
           return
         }
         scheduleReconnect()

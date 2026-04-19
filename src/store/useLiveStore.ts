@@ -7,6 +7,8 @@ export type ConnectionStatus = "idle" | "connecting" | "connected" | "error" | "
 export type ConnectionSlice = {
   status: ConnectionStatus
   error: string | null
+  /** True while reconnecting after an unclean close (exponential backoff). */
+  reconnecting: boolean
   /** Milliseconds to add to `Date.now()` for server-aligned clock (from LTS_TIMESYNC). */
   remoteTimeDiffMs: number
 }
@@ -34,6 +36,7 @@ export const useLiveStore = create<LiveState>((set) => ({
   connection: {
     status: "idle",
     error: null,
+    reconnecting: false,
     remoteTimeDiffMs: 0,
   },
   sessionMeta: null,

@@ -9,6 +9,8 @@ This app is a static frontend: there is no server component to run in production
 1. **Build:** `npm run build` — output is written to `dist/`.
 2. **Deploy:** upload or connect CI to publish the **contents** of `dist/` to [Netlify](https://www.netlify.com/), [Vercel](https://vercel.com/), [GitHub Pages](https://pages.github.com/), or any static host/CDN.
 
+**End-to-end tests (Playwright):** Build first so `vite preview` can serve `dist/`, then run `npm run test:e2e`. In CI, run `npm run build` before `npm run test:e2e` (the Playwright `webServer` only starts preview; it does not build). Install browsers once with `npx playwright install chromium`.
+
 **Client-side routing / SPA fallback:** If you use path-based client routing (for example `/event/123`) and users open or refresh a deep link, the host must rewrite unknown paths to `index.html` (HTTP 200 “rewrite”, not a redirect loop). If the live app is only ever loaded at `/` and state lives in the query string or hash, that rewrite is usually **not** required.
 
 This repo includes optional Netlify SPA safety via `netlify.toml` (`[[redirects]]` from `/*` to `/index.html` with `status = 200`). On Netlify you can use that file **or** a `public/_redirects` file copied into `dist` with the same rule; for Vercel, configure equivalent rewrites in `vercel.json`; for GitHub Pages, use a [404 fallback](https://github.com/spa-github-pages/spa-github-pages) or project-specific `base` in Vite when not deploying at the domain root.

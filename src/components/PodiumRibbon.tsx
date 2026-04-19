@@ -1,0 +1,130 @@
+import { ArrowDown, ArrowUp } from "lucide-react"
+
+import { parseChg } from "@/lib/chg"
+import { getPodiumRows } from "@/lib/podium"
+import type { RawResultRow } from "@/domain"
+import { useLiveStore } from "@/store/useLiveStore"
+import { cn } from "@/lib/utils"
+
+function str(v: unknown): string {
+  if (v === undefined || v === null) {
+    return ""
+  }
+  return String(v).trim()
+}
+
+function isLeaderGap(gap: unknown): boolean {
+  if (gap === undefined || gap === null || gap === "") {
+    return true
+  }
+  const n = typeof gap === "number" ? gap : Number(String(gap).trim())
+  return Number.isFinite(n) && n === 0
+}
+
+function gapLabel(row: RawResultRow, place: 1 | 2 | 3): string {
+  const g = row.GAP
+  if (place === 1) {
+    return isLeaderGap(g) ? "Leader" : str(g) || "—"
+  }
+  return str(g) || "—"
+}
+
+function ChgIndicator({ row }: { row: RawResultRow }) {
+  const chg = parseChg(row.CHG)
+  if (chg === null || chg === 0) {
+    return null
+  }
+  const up = chg > 0
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-0.5 text-[10px] font-medium tabular-nums",
+        up ? "text-[#9ddf2e]" : "text-[#fb7185]"
+      )}
+      title={`Δ ${chg > 0 ? "+" : ""}${chg}`}
+    >
+      {up ? <ArrowUp className="size-3" aria-hidden /> : <ArrowDown className="size-3" aria-hidden />}
+      {Math.abs(chg)}
+    </span>
+  )
+}
+
+function RibbonCard({
+  row,
+  place,
+}: {
+  row: RawResultRow
+  place: 1 | 2 | 3
+}) {
+  const name = str(row.NAME) || "—"
+  const team = str(row.TEAM)
+  const car = str(row.CAR)
+
+  return (
+    <div
+      className={cn(
+        "flex min-w-0 max-w-[10rem] flex-1 flex-col rounded-lg border border-white/[0.08] bg-[#1c2025] px-2.5 py-2",
+        place === 1 && "border-amber-400/35 shadow-[0_0_20px_rgba(34,211,238,0.12)]"
+      )}
+    >
+      <div className="mb-1 flex items-center justify-between gap-1.5">
+        <span
+          className={cn(
+            "inline-flex size-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold tabular-nums",
+            place === 1 && "bg-amber-500/20 text-amber-800 dark:text-amber-200",
+            place === 2 && "bg-slate-400/20 text-slate-800 dark:text-slate-200",
+            place === 3 && "bg-amber-900/15 text-amber-950 dark:text-amber-100"
+          )}
+        >
+          P{place}
+        </span>
+        <ChgIndicator row={row} />
+      </div>
+      <p className="truncate text-xs font-semibold leading-tight" title={name}>
+        {name}
+      </p>
+      {team ? (
+        <p className="text-muted-foreground truncate text-[10px] leading-tight" title={team}>
+          {team}
+        </p>
+      ) : null}
+      <p className="text-muted-foreground truncate font-mono text-[10px]" title={car || undefined}>
+        {car || "—"}
+      </p>
+      <p className="text-muted-foreground mt-0.5 font-mono text-[10px] tabular-nums">
+        {gapLabel(row, place)}
+      </p>
+    </div>
+  )
+}
+
+export function PodiumRibbon() {
+  const sessionMeta = useLiveStore((s) => s.sessionMeta)
+  const results = sessionMeta?.RESULT
+
+  if (!sessionMeta || !results?.length) {
+    return null
+  }
+
+  const [p1, p2, p3] = getPodiumRows(results)
+  if (!p1 && !p2 && !p3) {
+    return null
+  }
+
+  return (
+    <section
+      className="border-border flex shrink-0 items-stretch justify-center gap-2 border-b px-3 py-2 sm:gap-3 sm:px-4"
+      aria-label="Podium top three"
+    >
+      <div className="flex min-w-0 flex-1 justify-end sm:max-w-[11rem]">
+        {p2 ? <RibbonCard row={p2} place={2} /> : <div className="flex-1" />}
+      </div>
+      <div className="flex min-w-0 justify-center sm:max-w-[11rem]">
+        {p1 ? <RibbonCard row={p1} place={1} /> : null}
+      </div>
+      <div className="flex min-w-0 flex-1 justify-start sm:max-w-[11rem]">
+        {p3 ? <RibbonCard row={p3} place={3} /> : <div className="flex-1" />}
+      </div>
+    </section>
+  )
+}

@@ -7,6 +7,24 @@ function str(v: unknown): string {
   return String(v).trim()
 }
 
+function hasSectorTimeValue(v: unknown): boolean {
+  return str(v) !== ""
+}
+
+/**
+ * Highest sector index (1–9) where any row has a non-empty `S{n}TIME`.
+ */
+export function computeMaxSectors(rows: RawResultRow[]): number {
+  let max = 0
+  for (let n = 1; n <= 9; n++) {
+    const key = `S${n}TIME` as keyof RawResultRow
+    if (rows.some((r) => hasSectorTimeValue(r[key]))) {
+      max = n
+    }
+  }
+  return max
+}
+
 /** Drop rows whose CLASSNAME is in `excludedClasses` or PRO in `excludedProams`. */
 export function filterLeaderboardRowsByExclusions(
   rows: RawResultRow[],

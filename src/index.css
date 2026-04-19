@@ -2,8 +2,8 @@
 @import "tw-animate-css";
 
 /*
-  Design system: "Apex Precision" (Google Stitch, project live-timing).
-  Surfaces + accents: electric cyan session-best, lime personal-best, rose critical.
+  Design system: "Telemetric Cockpit" — ADAC 24h Nürburgring live timing.
+  Primary: Nürburgring red; data: JetBrains Mono via `--font-mono`.
 */
 
 @custom-variant dark (&:is(.dark *));
@@ -13,10 +13,10 @@
   --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
 
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
+  --radius-sm: calc(var(--radius) * 0.5);
+  --radius-md: calc(var(--radius) * 0.75);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-xl: calc(var(--radius) * 1.25);
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -46,21 +46,30 @@
 
 :root {
   color-scheme: dark;
-  --radius: 0.75rem;
+  --radius: 0.5rem;
 
-  /* Stitch / Material surface tokens */
-  --surface-lowest: #0a0e13;
-  --surface-low: #181c21;
-  --surface-container: #1c2025;
-  --surface-high: #262a30;
-  --surface-highest: #31353b;
-  --on-surface: #e0e2ea;
-  --on-surface-variant: #bbc9cd;
+  --surface-lowest: #0a0b0c;
+  --surface-low: #121314;
+  --surface-container: #181a1c;
+  --surface-high: #1e2124;
+  --surface-highest: #2a2d31;
+  --on-surface: #e8eaed;
+  --on-surface-variant: #9aa0a6;
 
-  --racing-cyan: #22d3ee;
-  --racing-lime: #9ddf2e;
-  --racing-amber: #f59e0b;
-  --racing-rose: #fb7185;
+  --nr-primary: #e30613;
+  --racing-positive: #009639;
+  --racing-hazard: #ff8000;
+
+  --sector-session: #22d3ee;
+  --sector-session-fg: #a5f3fc;
+  --sector-overall: #a855f7;
+  --sector-overall-fg: #e9d5ff;
+  --sector-personal: #9ddf2e;
+  --sector-personal-fg: #d9f99d;
+  --sector-pit: #f59e0b;
+
+  --delta-worse: #fb7185;
+  --delta-better: #009639;
 
   --background: var(--surface-lowest);
   --foreground: var(--on-surface);
@@ -69,8 +78,8 @@
   --popover: var(--surface-high);
   --popover-foreground: var(--on-surface);
 
-  --primary: var(--racing-cyan);
-  --primary-foreground: #001f25;
+  --primary: var(--nr-primary);
+  --primary-foreground: #fff5f5;
 
   --secondary: var(--surface-low);
   --secondary-foreground: var(--on-surface);
@@ -81,18 +90,18 @@
   --accent: var(--surface-highest);
   --accent-foreground: var(--on-surface);
 
-  --destructive: var(--racing-rose);
-  --destructive-foreground: #400010;
+  --destructive: #dc2626;
+  --destructive-foreground: #fef2f2;
 
-  --border: rgb(60 73 76 / 22%);
-  --input: rgb(60 73 76 / 35%);
-  --ring: var(--racing-cyan);
+  --border: rgb(255 255 255 / 8%);
+  --input: rgb(255 255 255 / 10%);
+  --ring: var(--nr-primary);
 
-  --chart-1: var(--racing-cyan);
-  --chart-2: var(--racing-lime);
-  --chart-3: #8aebff;
-  --chart-4: var(--racing-amber);
-  --chart-5: var(--racing-rose);
+  --chart-1: var(--nr-primary);
+  --chart-2: var(--racing-positive);
+  --chart-3: var(--sector-session);
+  --chart-4: var(--racing-hazard);
+  --chart-5: #94a3b8;
 }
 
 .dark {
@@ -102,24 +111,24 @@
   --card-foreground: var(--on-surface);
   --popover: var(--surface-high);
   --popover-foreground: var(--on-surface);
-  --primary: var(--racing-cyan);
-  --primary-foreground: #001f25;
+  --primary: var(--nr-primary);
+  --primary-foreground: #fff5f5;
   --secondary: var(--surface-low);
   --secondary-foreground: var(--on-surface);
   --muted: var(--surface-high);
   --muted-foreground: var(--on-surface-variant);
   --accent: var(--surface-highest);
   --accent-foreground: var(--on-surface);
-  --destructive: var(--racing-rose);
-  --destructive-foreground: #ffe4e8;
-  --border: rgb(60 73 76 / 22%);
-  --input: rgb(60 73 76 / 35%);
-  --ring: var(--racing-cyan);
-  --chart-1: var(--racing-cyan);
-  --chart-2: var(--racing-lime);
-  --chart-3: #8aebff;
-  --chart-4: var(--racing-amber);
-  --chart-5: var(--racing-rose);
+  --destructive: #dc2626;
+  --destructive-foreground: #fef2f2;
+  --border: rgb(255 255 255 / 8%);
+  --input: rgb(255 255 255 / 10%);
+  --ring: var(--nr-primary);
+  --chart-1: var(--nr-primary);
+  --chart-2: var(--racing-positive);
+  --chart-3: var(--sector-session);
+  --chart-4: var(--racing-hazard);
+  --chart-5: #94a3b8;
 }
 
 @layer base {

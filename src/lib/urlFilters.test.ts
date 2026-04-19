@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 
+import { defaultExcludedLeaderboardColumns } from "./leaderboardColumns"
 import {
   PARAM_EXC_CLASS,
   PARAM_EXC_COL,
@@ -10,6 +11,11 @@ import {
 } from "./urlFilters"
 
 describe("parseFilterParamsFromSearch / searchWithUpdatedFilters", () => {
+  it("uses default excluded columns when no col params are present", () => {
+    const parsed = parseFilterParamsFromSearch("")
+    expect(parsed.excludedColumns).toEqual(defaultExcludedLeaderboardColumns())
+  })
+
   it("round-trips filter state and preserves event + config", () => {
     const search =
       "?event=50&config=w3&" +

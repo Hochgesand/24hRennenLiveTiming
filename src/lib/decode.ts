@@ -3,10 +3,12 @@ import type { RawResultRow, WireScalar } from "./types"
 /** Semantic lap / sector status for UI (livetiming wire uses compact codes). */
 export type LapSectorStatus =
   | "sessionBest"
+  | "overallBest"
   | "personalBest"
   | "pit"
   | "inLap"
   | "outLap"
+  | "invalid"
   | "normal"
 
 /** Known `RESULT` row fields after `decodeResultRow` (wire keys → camelCase; status codes decoded). */
@@ -75,13 +77,15 @@ function isStatusWireKey(wireKey: string): boolean {
  * numeric) codes seen on LLTS / FLTS / ST*n*T-style fields:
  *
  * - **Personal best**: `P` / `p`.
- * - **Session / overall best** (“purple” in broadcast UIs): `O` (overall), `S` (session).
+ * - **Overall best**: `O`.
+ * - **Session best**: `S`.
  * - **In lap**: `I`, and numeric `1` (paired with `2` = out lap on some feeds).
  * - **Out lap**: `2`.
  * - **Pit**: `T` / `t` — heuristic for pit stop / tyre-change style flags when distinct from in/out
  *   lap (not all feeds expose this; unknown codes fall through to `normal`).
  *
  * Multi-character values use the **last** non-whitespace character so values like `"0P"` still resolve.
+ * - **Invalid**: `X`, `D`, `F`, `?`.
  * Empty, null, or unrecognized values return `normal`.
  */
 export function decodeLapStatus(code: WireScalar | undefined): LapSectorStatus {
@@ -102,10 +106,16 @@ export function decodeLapStatus(code: WireScalar | undefined): LapSectorStatus {
   const lower = ch.toLowerCase()
   const upper = ch.toUpperCase()
 
+  if (upper === "X" || upper === "D" || upper === "F" || ch === "?") {
+    return "invalid"
+  }
   if (lower === "p") {
     return "personalBest"
   }
-  if (upper === "O" || upper === "S") {
+  if (upper === "O") {
+    return "overallBest"
+  }
+  if (upper === "S") {
     return "sessionBest"
   }
   if (upper === "I" || ch === "1") {

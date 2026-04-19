@@ -29,9 +29,11 @@ const fixtureRawResultRow: RawResultRow = {
 describe("decodeLapStatus", () => {
   it("maps common wire codes", () => {
     expect(decodeLapStatus("P")).toBe("personalBest")
-    expect(decodeLapStatus("O")).toBe("sessionBest")
+    expect(decodeLapStatus("O")).toBe("overallBest")
+    expect(decodeLapStatus("S")).toBe("sessionBest")
     expect(decodeLapStatus("I")).toBe("inLap")
     expect(decodeLapStatus("2")).toBe("outLap")
+    expect(decodeLapStatus("X")).toBe("invalid")
     expect(decodeLapStatus("")).toBe("normal")
   })
 })
@@ -53,7 +55,7 @@ describe("decodeResultRow", () => {
     expect(decoded.fastestLap).toBe("1:26.012")
 
     expect(decoded.llts).toBe("personalBest")
-    expect(decoded.flts).toBe("sessionBest")
+    expect(decoded.flts).toBe("overallBest")
 
     expect(decoded.s1Time).toBe("28.123")
     expect(decoded.st1t).toBe("sessionBest")
