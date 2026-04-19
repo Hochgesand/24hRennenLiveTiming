@@ -227,4 +227,14 @@
     outline: 1px solid var(--color-primary-container);
     outline-offset: -1px;
   }
+  /*
+   * Shared keyboard-focus ring for every interactive element in the Stitch
+   * shell + stats cockpit (PRD-statistics-cockpit.md §"Accessibility" item 2).
+   * Outline colour mixes the existing `outline-variant` token at 30 % opacity
+   * so the visible focus state stays consistent with the design tokens.
+   */
+  .focus-ring {
+    @apply focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2;
+    outline-color: color-mix(in srgb, var(--color-outline-variant) 30%, transparent);
+  }
 }

@@ -54,14 +54,14 @@ describe("BrandTopBar", () => {
   it("clicking Settings calls setSettingsDrawerOpen(true)", () => {
     render(<BrandTopBar />)
     expect(useUiStore.getState().settingsDrawerOpen).toBe(false)
-    fireEvent.click(screen.getByRole("button", { name: "Settings" }))
+    fireEvent.click(screen.getByRole("button", { name: "Einstellungen" }))
     expect(useUiStore.getState().settingsDrawerOpen).toBe(true)
   })
 
   it("Search and Notifications buttons render with data-todo and do not throw on click", () => {
     render(<BrandTopBar />)
-    const search = screen.getByRole("button", { name: "Search" })
-    const notifications = screen.getByRole("button", { name: "Notifications" })
+    const search = screen.getByRole("button", { name: "Suchen" })
+    const notifications = screen.getByRole("button", { name: "Benachrichtigungen" })
 
     expect(search.getAttribute("data-todo")).toBe("search")
     expect(notifications.getAttribute("data-todo")).toBe("notifications")

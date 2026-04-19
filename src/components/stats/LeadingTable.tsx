@@ -261,7 +261,7 @@ export const LeadingTable = memo(function LeadingTable() {
                     data-nr={row.carNumber}
                     aria-label={aria}
                     disabled={disabled}
-                    className="w-full text-left flex items-center bg-surface-container-low p-3 border-l-2 border-primary-container group disabled:opacity-50"
+                    className="w-full text-left flex items-center bg-surface-container-low p-3 border-l-2 border-primary-container group disabled:opacity-50 focus-ring"
                   >
                     <div className="flex-grow min-w-0">
                       <div className="flex justify-between items-baseline mb-0.5">
@@ -327,7 +327,7 @@ export const LeadingTable = memo(function LeadingTable() {
                     type="button"
                     onClick={() => cycleSort("class")}
                     data-testid="leading-sort-class"
-                    className="inline-flex items-center gap-1 text-zinc-500 hover:text-on-surface uppercase tracking-widest font-headline font-bold text-[10px]"
+                    className="inline-flex items-center gap-1 text-zinc-500 hover:text-on-surface uppercase tracking-widest font-headline font-bold text-[10px] focus-ring"
                     aria-label={`${t("stats.leading.sortAria")}: ${t("stats.leading.colClass")}`}
                   >
                     {t("stats.leading.colClass")}
@@ -349,7 +349,7 @@ export const LeadingTable = memo(function LeadingTable() {
                     type="button"
                     onClick={() => cycleSort("laps")}
                     data-testid="leading-sort-laps"
-                    className="inline-flex items-center gap-1 text-zinc-500 hover:text-on-surface uppercase tracking-widest font-headline font-bold text-[10px]"
+                    className="inline-flex items-center gap-1 text-zinc-500 hover:text-on-surface uppercase tracking-widest font-headline font-bold text-[10px] focus-ring"
                     aria-label={`${t("stats.leading.sortAria")}: ${t("stats.leading.colLaps")}`}
                   >
                     {t("stats.leading.colLaps")}
@@ -365,7 +365,7 @@ export const LeadingTable = memo(function LeadingTable() {
                     type="button"
                     onClick={() => cycleSort("gap")}
                     data-testid="leading-sort-gap"
-                    className="inline-flex items-center gap-1 text-zinc-500 hover:text-on-surface uppercase tracking-widest font-headline font-bold text-[10px]"
+                    className="inline-flex items-center gap-1 text-zinc-500 hover:text-on-surface uppercase tracking-widest font-headline font-bold text-[10px] focus-ring"
                     aria-label={`${t("stats.leading.sortAria")}: ${t("stats.leading.colGap")}`}
                   >
                     {t("stats.leading.colGap")}
@@ -381,7 +381,7 @@ export const LeadingTable = memo(function LeadingTable() {
                     type="button"
                     onClick={() => cycleSort("sum")}
                     data-testid="leading-sort-sum"
-                    className="inline-flex items-center gap-1 text-zinc-500 hover:text-on-surface uppercase tracking-widest font-headline font-bold text-[10px]"
+                    className="inline-flex items-center gap-1 text-zinc-500 hover:text-on-surface uppercase tracking-widest font-headline font-bold text-[10px] focus-ring"
                     aria-label={`${t("stats.leading.sortAria")}: ${t("stats.leading.colSum")}`}
                   >
                     {t("stats.leading.colSum")}
@@ -417,7 +417,7 @@ export const LeadingTable = memo(function LeadingTable() {
                         onClick={() => openDrilldown(row.carNumber)}
                         data-testid="leading-row-nr"
                         aria-label={`${t("stats.leading.openDrilldownAria")}: #${row.carNumber}`}
-                        className="text-zinc-400 hover:text-on-surface underline-offset-2 hover:underline transition-colors disabled:no-underline disabled:cursor-not-allowed"
+                        className="text-zinc-400 hover:text-on-surface underline-offset-2 hover:underline transition-colors disabled:no-underline disabled:cursor-not-allowed focus-ring"
                         disabled={disabled}
                       >
                         #{row.carNumber}

@@ -378,6 +378,13 @@ function opacityStopForRank(rank: number): BestLapOpacityStop {
  * - Skips rows whose `CLASS` is empty / "TOTAL" (case-insensitive).
  * - Applies {@link filterRowsByExcludedClasses} for the spectator filter.
  * - Drops rows whose `LAPTIME` is unparseable or non-positive.
+ * - **Deduplicates per `CLASS`**, keeping only the fastest lap per class. The
+ *   WIGE `BESTLAPS` array can carry multiple top laps per class/car (e.g. the
+ *   N fastest laps overall), and the chart title "Beste Runde pro Klasse"
+ *   commits us to one row per class. Comparison uses the trimmed `CLASS`
+ *   string verbatim — no case-folding — so labels coming back as different
+ *   spellings ("SP-Pro" vs "SP-PRO") are kept distinct, matching how the
+ *   class-filter chips treat them.
  * - `widthPct = (fastestSeconds / row.seconds) * 100`, clamped to [20, 100] so
  *   slow rows still render a visible nub.
  * - `opacityStop` maps by rank: 1→100, 2→80, 3→60, 4→40, anything else→20
@@ -441,10 +448,22 @@ export function bestLapsByClass(
     return []
   }
 
-  parsed.sort((a, b) => a.seconds - b.seconds)
-  const fastest = parsed[0]!.seconds
+  // Dedupe per class — keep only the fastest lap per `classLabel`. WIGE's
+  // `BESTLAPS` can return several top laps for the same class/car, but this
+  // chart promises one row per class.
+  const fastestByClass = new Map<string, Parsed>()
+  for (const row of parsed) {
+    const existing = fastestByClass.get(row.classLabel)
+    if (!existing || row.seconds < existing.seconds) {
+      fastestByClass.set(row.classLabel, row)
+    }
+  }
+  const deduped = Array.from(fastestByClass.values())
 
-  return parsed.map((row, index) => {
+  deduped.sort((a, b) => a.seconds - b.seconds)
+  const fastest = deduped[0]!.seconds
+
+  return deduped.map((row, index) => {
     const rank = index + 1
     const rawPct = (fastest / row.seconds) * 100
     const widthPct = Math.max(

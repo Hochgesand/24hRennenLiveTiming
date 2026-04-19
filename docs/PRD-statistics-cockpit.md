@@ -111,24 +111,24 @@ These rules are binding for the implementation:
 
 ### Internationalisation
 
-1. **[offen]** As a German-speaking spectator, I want every label (`Statistik`, `Klassen-Führende`, `Schnellste Runde`, `Beste Sektor-Splits`, …) routed through `src/i18n/strings.ts`, with `de` as primary and `en` available, so that the tab matches the rest of the dashboard.
+1. **[done]** As a German-speaking spectator, I want every label (`Statistik`, `Klassen-Führende`, `Schnellste Runde`, `Beste Sektor-Splits`, …) routed through `src/i18n/strings.ts`, with `de` as primary and `en` available, so that the tab matches the rest of the dashboard.
 
 ### URL / shareability
 
-1. **[offen]** As a Twitter/Discord poster, I want `?tab=stats` and `?statsExcludedClasses=Cup3,V6` to round-trip through the URL, so that I can deep-link a colleague to a filtered view.
+1. **[done]** As a Twitter/Discord poster, I want `?tab=stats` and `?statsExcludedClasses=Cup3,V6` to round-trip through the URL, so that I can deep-link a colleague to a filtered view.
 
 ### Test data & determinism
 
-1. **[offen]** As a developer, I want a **fixture** (`src/lib/__fixtures__/pid9002.event50.json`) captured from event 50 / config w3 (date `2026-04-19`), so that the new derive helpers are unit-testable on real, representative data.
+1. **[done]** As a developer, I want a **fixture** (`src/lib/__fixtures__/pid9002.event50.json`) captured from event 50 / config w3 (date `2026-04-19`), so that the new derive helpers are unit-testable on real, representative data.
 
 ### Performance
 
-1. **[offen]** As a developer, I want the four bands wrapped in `React.memo` and the derive helpers memoised on the `(statistics, snapshot, excludedStatsClasses)` triple, so that re-renders triggered by unrelated PID 0/3/4 frames do not retrigger heatmap layout.
+1. **[done]** As a developer, I want the four bands wrapped in `React.memo` and the derive helpers memoised on the `(statistics, snapshot, excludedStatsClasses)` triple, so that re-renders triggered by unrelated PID 0/3/4 frames do not retrigger heatmap layout.
 
 ### Accessibility
 
-1. **[offen]** As a screen-reader user, I want each heatmap cell to expose `aria-label="Klasse «X», Sektor «Sn», Zeit «t», Δ «d»"`, so that the matrix is operable beyond the visual encoding.
-2. **[offen]** As a keyboard user, I want side-nav, sub-tabs, chip bar, table headers, table rows, and heatmap cells reachable via Tab with visible focus rings (the existing `outline_variant` 30 % token).
+1. **[done]** As a screen-reader user, I want each heatmap cell to expose `aria-label="Klasse «X», Sektor «Sn», Zeit «t», Δ «d»"`, so that the matrix is operable beyond the visual encoding.
+2. **[done]** As a keyboard user, I want side-nav, sub-tabs, chip bar, table headers, table rows, and heatmap cells reachable via Tab with visible focus rings (the existing `outline_variant` 30 % token).
 
 ### App shell — Stitch 1:1 migration (NEW BAND)
 
@@ -256,3 +256,48 @@ A good test here exercises **observable behaviour and Stitch parity**: given a c
 - The **theoretical best** uses the `BESTSECTORS[CLASS=TOTAL]` row when present; if absent, it falls back to summing the column-best per sector across all classes. Document this fallback in the `classKpis` JSDoc.
 - The **driver/team** column is best-effort: PID 0 RESULT may lag PID 9002 by a few seconds at session start. Render em-dash, not a spinner.
 - The follow-up issue should track: (1) E2E harness for fixture injection, (2) CSV export, (3) per-driver stat view inside the drilldown.
+
+---
+
+## Cross-cutting addendum (Stories 35-40)
+
+### i18n audit (Story 35)
+
+A grep over the five Statistik bands (`StatsKpiStrip`, `StatsClassFilter`,
+`BestLapPerClassChart`, `SectorHeatmap`, `LeadingTable`) and the five shell
+components (`BrandTopBar`, `SideNav`, `MobileBottomNav`, `StatsSubTabs`,
+`StatsTabSection`) confirms that every user-visible label, ARIA label, and
+title attribute is routed through `useI18n().t(…)` against
+`src/i18n/strings.ts`. Remaining hard-coded literals fall into the explicit
+exclusion list — brand wordmarks `LIVE TIMING`, `24H NÜRBURGRING`,
+`STRAT_OFFICER_01` (per F2), Material-Symbols glyph names rendered inside
+`aria-hidden` spans, the locale-free synthetic class label `Leader` produced
+by `statistics.ts` (per Stitch contract), separators (`·`, em-dash), and pure
+data composition (e.g. `"#" + carNumber`). All `de` strings remain the Stitch
+literals; `en` provides the parity translation. Locale fall-back is `de` if
+no `<I18nProvider>` is mounted.
+
+### Performance note (Story 38)
+
+All five Statistik bands are wrapped in `React.memo` so that PID 0 / 3 / 4
+frames (which never carry stats payload) do not re-render the heatmap or the
+bar chart. Inside each band the derive call is wrapped in `useMemo` with the
+`(statistics, snapshot, excludedStatsClasses)` triple as the only dependency
+— `StatsKpiStrip` reads `(statistics, snapshot)`, `BestLapPerClassChart` and
+`SectorHeatmap` read `(statistics, excludedStatsClasses)`, `LeadingTable`
+reads the full triple plus its `(sortKey, sortDir)`, and `StatsClassFilter`
+reads `(statistics)` only. The derive helpers in `src/lib/statistics.ts` are
+pure; combined with `React.memo` this keeps re-render work proportional to
+actual stats turnover.
+
+### Focus ring (Story 40)
+
+`src/index.css` exposes a single `.focus-ring` utility that maps to the
+`outline-variant` 30 % token via `focus-visible:outline outline-1
+outline-offset-2`. The class is applied to side-nav buttons, sub-tab
+buttons, mobile bottom-nav buttons, brand-top-bar icon buttons,
+`StatsClassFilter` chips + reset, `LeadingTable` sortable headers + `#NR`
+drilldown trigger + mobile cards, `SectorHeatmap` class-jump buttons, and
+the `BestLapPerClassChart` "Mehr anzeigen" expand button. A regression test
+(`src/components/focusRing.test.tsx`) asserts that one representative
+element per component carries the class.

@@ -138,18 +138,21 @@ describe("SectorHeatmap", () => {
     expect(lap.textContent).toBe("1:51.000")
   })
 
-  it("aria-label exposes Bestzeit for the column-best and Δ +X.XXX s (+Y.YY %) otherwise", () => {
+  it("aria-label follows the brief format: 'Klasse X, Sektor Sn, Zeit t, ...' (Bestzeit | Δ ... )", () => {
     setRows(FOUR_SECTOR_ROWS)
     const { container } = render(<SectorHeatmap />)
 
     const cells = container.querySelectorAll("tbody tr")
     const sp9S1 = cells[0]!.querySelectorAll("td")[0]!
-    expect(sp9S1.getAttribute("aria-label")).toContain("Bestzeit")
-    expect(sp9S1.getAttribute("title")).toContain("Bestzeit")
+    const sp9Aria = sp9S1.getAttribute("aria-label")!
+    expect(sp9Aria).toBe("Klasse SP9, Sektor S1, Zeit 21.000, Bestzeit")
+    expect(sp9S1.getAttribute("title")).toBe(sp9Aria)
 
     const cup2S1 = cells[2]!.querySelectorAll("td")[0]!
     const aria = cup2S1.getAttribute("aria-label")!
-    expect(aria).toMatch(/Δ \+\d+\.\d{3} s \(\+\d+\.\d{2} %\)/)
+    expect(aria).toMatch(
+      /^Klasse CUP2, Sektor S1, Zeit \S+, Δ \+\d+\.\d{3} s \(\+\d+\.\d{2} %\)$/
+    )
   })
 
   it("renders the mobile variant with sticky first column on header AND body rows, plus a secondary pill on the column-best cell", () => {

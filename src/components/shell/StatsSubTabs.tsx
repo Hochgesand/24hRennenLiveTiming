@@ -40,7 +40,7 @@ export function StatsSubTabs({ className, onSelect }: StatsSubTabsProps) {
           role="tab"
           aria-selected="true"
           onClick={() => onSelect?.("statistik")}
-          className="px-6 py-2 text-xs font-headline font-bold uppercase tracking-widest bg-primary-container text-on-primary-container"
+          className="px-6 py-2 text-xs font-headline font-bold uppercase tracking-widest bg-primary-container text-on-primary-container focus-ring"
         >
           {t("shell.subTabs.statistik")}
         </button>
@@ -51,7 +51,7 @@ export function StatsSubTabs({ className, onSelect }: StatsSubTabsProps) {
           title={t("shell.subTabs.comingSoon")}
           tabIndex={-1}
           onClick={handleDisabledClick}
-          className="px-6 py-2 text-xs font-headline font-bold uppercase tracking-widest text-zinc-500 cursor-not-allowed opacity-40"
+          className="px-6 py-2 text-xs font-headline font-bold uppercase tracking-widest text-zinc-500 cursor-not-allowed opacity-40 focus-ring"
         >
           {t("shell.subTabs.verlauf")}
         </button>
@@ -62,7 +62,7 @@ export function StatsSubTabs({ className, onSelect }: StatsSubTabsProps) {
           title={t("shell.subTabs.comingSoon")}
           tabIndex={-1}
           onClick={handleDisabledClick}
-          className="px-6 py-2 text-xs font-headline font-bold uppercase tracking-widest text-zinc-500 cursor-not-allowed opacity-40"
+          className="px-6 py-2 text-xs font-headline font-bold uppercase tracking-widest text-zinc-500 cursor-not-allowed opacity-40 focus-ring"
         >
           {t("shell.subTabs.deltaAi")}
         </button>

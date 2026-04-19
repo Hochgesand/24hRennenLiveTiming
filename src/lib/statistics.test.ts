@@ -468,6 +468,28 @@ describe("bestLapsByClass", () => {
     expect(rows[0]!.opacityStop).toBe(100)
   })
 
+  it("dedupes per class, keeping only the fastest lap when BESTLAPS has multiple rows for the same class", () => {
+    const stats = frame({
+      BESTLAPS: [
+        { CLASS: "SP-X", NR: "81", LAPTIME: "8:21.515" },
+        { CLASS: "SP-X", NR: "81", LAPTIME: "8:18.620" },
+        { CLASS: "SP-X", NR: "81", LAPTIME: "8:21.325" },
+        { CLASS: "SP9", NR: "3", LAPTIME: "8:17.477" },
+        { CLASS: "SP9", NR: "3", LAPTIME: "8:10.453" },
+        { CLASS: "SP9", NR: "84", LAPTIME: "8:17.419" },
+      ],
+    })
+
+    const rows = bestLapsByClass(stats)
+    expect(rows).toHaveLength(2)
+    expect(rows.map((r) => r.classLabel)).toEqual(["SP9", "SP-X"])
+    expect(rows[0]!.display).toBe("8:10.453")
+    expect(rows[0]!.carNumber).toBe("3")
+    expect(rows[1]!.display).toBe("8:18.620")
+    expect(rows[1]!.carNumber).toBe("81")
+    expect(rows.map((r) => r.rank)).toEqual([1, 2])
+  })
+
   it("maps ranks 1..6 to opacity stops 100/80/60/40/20/20", () => {
     const stats = frame({
       BESTLAPS: [

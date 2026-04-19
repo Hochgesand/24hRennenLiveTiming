@@ -36,8 +36,8 @@ export function MobileBottomNav({ active, onSelect, className }: MobileBottomNav
       {ITEMS.map((item) => {
         const isActive = active === item.id
         const buttonClass = isActive
-          ? "flex flex-col items-center justify-center text-[#E30613] border-t-2 border-[#E30613] pt-2 pb-3 bg-[#2a2b2c] flex-1"
-          : "flex flex-col items-center justify-center text-gray-500 pt-2 pb-3 opacity-60 flex-1"
+          ? "flex flex-col items-center justify-center text-[#E30613] border-t-2 border-[#E30613] pt-2 pb-3 bg-[#2a2b2c] flex-1 focus-ring"
+          : "flex flex-col items-center justify-center text-gray-500 pt-2 pb-3 opacity-60 flex-1 focus-ring"
         return (
           <button
             key={item.id}

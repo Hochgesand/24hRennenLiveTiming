@@ -76,15 +76,18 @@ function pickMobilePillClass(
 /**
  * Build the screen-reader label / native title for a cell.
  *
- * Format examples:
- * - Best:    `SP9 S1: 1:21.200 (Bestzeit)`
- * - Slower:  `CUP2 S1: 1:25.400 · Δ +4.200 s (+5.18 %)`
- * - Empty:   `CUP2 S5: —`
+ * Per PRD-statistics-cockpit.md §"Accessibility" item 1, the format is:
+ *   `Klasse <X>, Sektor S<n>, Zeit <t>, Δ <d>`
  *
- * `Bestzeit` is intentionally a literal (matches the german UI; the rest of the
- * label is data-driven). It does not need an i18n indirection — the label is a
- * tooltip / aria-label, not visible chrome, and the same string ships in both
- * locales.
+ * Format examples:
+ * - Best:    `Klasse SP9, Sektor S1, Zeit 1:21.200, Bestzeit`
+ * - Slower:  `Klasse CUP2, Sektor S1, Zeit 1:25.400, Δ +4.200 s (+5.18 %)`
+ * - Empty:   `Klasse CUP2, Sektor S5, Zeit —`
+ *
+ * The `Klasse / Sektor / Zeit / Bestzeit` prefixes are intentionally literal
+ * German (the label is a tooltip / aria-label, not visible chrome, and the
+ * same string ships in both locales — matches the rest of the dashboard's
+ * sector-tooltip convention).
  */
 function buildCellAria(
   classLabel: string,
@@ -92,18 +95,18 @@ function buildCellAria(
   cell: SectorHeatmapCell
 ): string {
   if (cell.seconds === null) {
-    return `${classLabel} S${sector}: —`
+    return `Klasse ${classLabel}, Sektor S${sector}, Zeit —`
   }
   const time = formatLapSeconds(cell.seconds)
   if (cell.isColumnBest) {
-    return `${classLabel} S${sector}: ${time} (Bestzeit)`
+    return `Klasse ${classLabel}, Sektor S${sector}, Zeit ${time}, Bestzeit`
   }
   if (cell.deltaSeconds === null || cell.deltaRel === null) {
-    return `${classLabel} S${sector}: ${time}`
+    return `Klasse ${classLabel}, Sektor S${sector}, Zeit ${time}`
   }
   const dSec = `+${cell.deltaSeconds.toFixed(3)} s`
   const dPct = `+${(cell.deltaRel * 100).toFixed(2)} %`
-  return `${classLabel} S${sector}: ${time} · Δ ${dSec} (${dPct})`
+  return `Klasse ${classLabel}, Sektor S${sector}, Zeit ${time}, Δ ${dSec} (${dPct})`
 }
 
 export const SectorHeatmap = memo(function SectorHeatmap() {
@@ -173,7 +176,7 @@ export const SectorHeatmap = memo(function SectorHeatmap() {
                         data-testid="heatmap-class-jump"
                         data-class={row.classLabel}
                         aria-label={`${t("stats.heatmap.jumpToLeading")}: ${row.classLabel}`}
-                        className="w-full text-left py-2 pr-4 font-bold text-on-surface hover:text-red-400 transition-colors"
+                        className="w-full text-left py-2 pr-4 font-bold text-on-surface hover:text-red-400 transition-colors focus-ring"
                       >
                         {row.classLabel}
                       </button>
@@ -279,7 +282,7 @@ export const SectorHeatmap = memo(function SectorHeatmap() {
                       data-testid="heatmap-class-jump"
                       data-class={row.classLabel}
                       aria-label={`${t("stats.heatmap.jumpToLeading")}: ${row.classLabel}`}
-                      className="w-full text-left py-2 pr-2 font-headline font-bold uppercase hover:text-red-400 transition-colors"
+                      className="w-full text-left py-2 pr-2 font-headline font-bold uppercase hover:text-red-400 transition-colors focus-ring"
                     >
                       {row.classLabel}
                     </button>

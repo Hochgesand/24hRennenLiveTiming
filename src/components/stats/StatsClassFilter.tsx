@@ -26,7 +26,7 @@ import { useFilterStore } from "@/store/useFilterStore"
 import { useLiveStore } from "@/store/useLiveStore"
 
 const CHIP_BASE =
-  "px-3 py-1 rounded-sm text-[10px] font-headline uppercase tracking-widest transition-colors"
+  "px-3 py-1 rounded-sm text-[10px] font-headline uppercase tracking-widest transition-colors focus-ring"
 
 const CHIP_INACTIVE = `${CHIP_BASE} bg-surface-container-low text-zinc-400 hover:text-on-surface hover:bg-surface-container`
 
@@ -80,7 +80,7 @@ export const StatsClassFilter = memo(function StatsClassFilter() {
           <button
             type="button"
             onClick={() => clearAll()}
-            className="text-zinc-500 hover:text-on-surface text-[10px] font-headline uppercase tracking-widest underline-offset-2 hover:underline ml-auto shrink-0 px-2 py-1 transition-colors"
+            className="text-zinc-500 hover:text-on-surface text-[10px] font-headline uppercase tracking-widest underline-offset-2 hover:underline ml-auto shrink-0 px-2 py-1 transition-colors focus-ring"
             data-testid="stats-class-filter-reset"
             aria-label={t("stats.classFilter.resetAria")}
           >
