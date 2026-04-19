@@ -62,17 +62,17 @@ These rules are binding for the implementation:
 1. **[done]** As a spectator, I want to see the **schnellste Runde des Rennens** (lap time + class + #NR) as a hero KPI in the Statistik tab, so that I do not have to scan a 154-row table to find it.
 2. **[done]** As an analyst, I want a **theoretische Bestzeit TOTAL** KPI (sum of column-bests across S1..Sn from `BESTSECTORS` for `CLASS=TOTAL`), so that I can see what the fastest lap on this circuit could currently be.
 3. **[done]** As an analyst, I want a **Δ Real → Theoretisch** KPI rendered with race-green sign (positive = unused potential) so that I instantly see how much performance is left on the table.
-4. **[offen]** As a spectator, I want an **Aktive Klassen** KPI (count of distinct CLASS values in `LEADING`, excluding `TOTAL`) plus the raw `LEADING` count as caption, so that I have a sense of grid scope.
-5. **[offen]** As a developer, I want all KPI numbers rendered with `JetBrains Mono` and the `formatLapSeconds` helper so deltas and lap times line up across the dashboard.
-6. **[offen]** As a viewer with no live event data, I want the KPI strip to render a skeleton (4 placeholder cards with em-dash values), so that the tab does not collapse to a single "No statistics" string.
+4. **[done]** As a spectator, I want an **Aktive Klassen** KPI (count of distinct CLASS values in `LEADING`, excluding `TOTAL`) plus the raw `LEADING` count as caption, so that I have a sense of grid scope.
+5. **[done]** As a developer, I want all KPI numbers rendered with `JetBrains Mono` and the `formatLapSeconds` helper so deltas and lap times line up across the dashboard.
+6. **[done]** As a viewer with no live event data, I want the KPI strip to render a skeleton (4 placeholder cards with em-dash values), so that the tab does not collapse to a single "No statistics" string.
 
 ### Statistik tab — class filter
 
-1. **[offen]** As a spectator, I want a **horizontal chip bar** of all classes present in PID 9002 (deduped from `LEADING.CLASS ∪ BESTLAPS.CLASS ∪ BESTSECTORS.CLASS`), so that I can hide noise and focus on a class group.
-2. **[offen]** As a returning user, I want my class selection to **persist across reloads** (URL param `statsExcludedClasses=` + same lazy-hydration pattern as `excludedClasses`), so that my view stays put when refreshing during a 24h race.
-3. **[offen]** As a power user, I want a **Reset** link at the right edge of the chip bar to clear all exclusions in one click.
-4. **[offen]** As a user on mobile, I want the chip bar to **horizontally scroll with a fade mask** at the right edge, so that I can still discover all classes without losing layout density.
-5. **[offen]** As a developer, I want the chip bar to also drive the bar chart, the heatmap and the leading table from the **same** filtered class set, so that the four bands stay consistent.
+1. **[done]** As a spectator, I want a **horizontal chip bar** of all classes present in PID 9002 (deduped from `LEADING.CLASS ∪ BESTLAPS.CLASS ∪ BESTSECTORS.CLASS`), so that I can hide noise and focus on a class group.
+2. **[done]** As a returning user, I want my class selection to **persist across reloads** (URL param `statsExcludedClasses=` + same lazy-hydration pattern as `excludedClasses`), so that my view stays put when refreshing during a 24h race.
+3. **[done]** As a power user, I want a **Reset** link at the right edge of the chip bar to clear all exclusions in one click.
+4. **[done]** As a user on mobile, I want the chip bar to **horizontally scroll with a fade mask** at the right edge, so that I can still discover all classes without losing layout density.
+5. **[done]** As a developer, I want the chip bar to also drive the bar chart, the heatmap and the leading table from the **same** filtered class set, so that the four bands stay consistent.
 
 ### Statistik tab — best-lap-per-class bar chart
 

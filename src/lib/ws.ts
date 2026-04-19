@@ -19,13 +19,15 @@ export type LiveTimingClientOptions = {
   url?: string
   eventId: string
   eventPid: number[]
+  /** Extra fields merged into the open-subscribe frame (e.g. session, startingNo for PID 7). */
+  subscribeExtras?: Record<string, string | number>
   /** Inject for tests (default: global WebSocket). */
   WebSocketImpl?: typeof WebSocket
 }
 
 /**
  * WebSocket client for livetiming.azurewebsites.net.
- * On open, sends `{ eventId, eventPid, clientLocalTime }`.
+ * On open, sends `{ eventId, eventPid, clientLocalTime, ...subscribeExtras }`.
  * Expects `LTS_TIMESYNC` before any data frames (matches server contract).
  */
 export class LiveTimingClient {
@@ -34,12 +36,14 @@ export class LiveTimingClient {
   private readonly url: string
   private readonly eventId: string
   private readonly eventPid: number[]
+  private readonly subscribeExtras: Record<string, string | number> | undefined
   private readonly WebSocketImpl: typeof WebSocket
 
   constructor(options: LiveTimingClientOptions) {
     this.url = options.url ?? LIVETIMING_WS_URL
     this.eventId = options.eventId
     this.eventPid = options.eventPid
+    this.subscribeExtras = options.subscribeExtras
     this.WebSocketImpl = options.WebSocketImpl ?? WebSocket
   }
 
@@ -66,6 +70,7 @@ export class LiveTimingClient {
           eventId: this.eventId,
           eventPid: this.eventPid,
           clientLocalTime: Date.now(),
+          ...this.subscribeExtras,
         })
       )
     }

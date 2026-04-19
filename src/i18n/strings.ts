@@ -96,6 +96,12 @@ export const STRINGS: Record<
     "stats.kpi.activeClasses.caption": "Aktive Klassen",
     "stats.kpi.activeClasses.subSuffix": "LEADING",
     "stats.kpi.activeClasses.noData": "KEINE DATEN",
+    "stats.kpi.skeleton.waiting": "Warte auf PID 9002",
+    "stats.classFilter.label": "Filter_Klasse:",
+    "stats.classFilter.ariaLabel": "Klassen filtern",
+    "stats.classFilter.toggleAria": "Klasse umschalten",
+    "stats.classFilter.reset": "Zurücksetzen",
+    "stats.classFilter.resetAria": "Klassenfilter zurücksetzen",
   },
   en: {
     "app.title": "Live timing",
@@ -190,6 +196,12 @@ export const STRINGS: Record<
     "stats.kpi.activeClasses.caption": "Active classes",
     "stats.kpi.activeClasses.subSuffix": "LEADING",
     "stats.kpi.activeClasses.noData": "NO DATA",
+    "stats.kpi.skeleton.waiting": "Waiting for PID 9002",
+    "stats.classFilter.label": "Class_Filter:",
+    "stats.classFilter.ariaLabel": "Class filter",
+    "stats.classFilter.toggleAria": "Toggle class",
+    "stats.classFilter.reset": "Reset",
+    "stats.classFilter.resetAria": "Reset class filter",
   },
 }
 

@@ -160,15 +160,67 @@ function countActiveClasses(rows: StatisticsLeadingRow[]): number {
 }
 
 /**
+ * Returns true when the given class label is currently excluded from the stats cockpit.
+ * Centralised so bar chart, heatmap, leading table and KPI strip all gate on the
+ * same predicate (PRD class-filter band item 5).
+ *
+ * - Trims input
+ * - Empty / null / undefined → never excluded (treated as "no class label")
+ * - Comparison is case-sensitive (matches the wire format from PID 9002)
+ */
+export function isStatsClassExcluded(
+  classLabel: WireScalar | undefined,
+  excluded: ReadonlySet<string>
+): boolean {
+  if (classLabel === undefined || classLabel === null) return false
+  const s = String(classLabel).trim()
+  if (s === "") return false
+  return excluded.has(s)
+}
+
+/**
+ * Filters an array of rows that carry a `CLASS` field by the excluded set.
+ * Generic over the row shape to keep callers free of casts.
+ *
+ * Semantics:
+ * - `null` / `undefined` rows → `[]`
+ * - Empty excluded set → shallow clone of `rows` (preserves order)
+ * - Otherwise drops every row whose trimmed `CLASS` is present in `excluded`
+ */
+export function filterRowsByExcludedClasses<T extends { CLASS?: WireScalar }>(
+  rows: ReadonlyArray<T> | null | undefined,
+  excluded: ReadonlySet<string>
+): T[] {
+  if (!rows || rows.length === 0) return []
+  if (excluded.size === 0) return [...rows]
+  return rows.filter((r) => !isStatsClassExcluded(r.CLASS, excluded))
+}
+
+/**
  * Derive the KPI strip values from a PID 9002 snapshot.
  *
  * Defensive against missing payloads, missing arrays, and malformed scalars
  * (numeric/string/null/undefined). Pure function — no React, no store access.
+ *
+ * The optional {@link excludedStatsClasses} set drives the same filter the bar
+ * chart, sector heatmap and leading table will gate on (PRD class-filter band
+ * item 5). It applies to LEADING and BESTLAPS only — the BESTSECTORS `TOTAL`
+ * row is a synthetic theoretical limit across the whole field and is never
+ * filtered.
  */
-export function classKpis(stats: Pid9002Frame | null | undefined): ClassKpis {
-  const bestLaps = bestLapsArray(stats)
+export function classKpis(
+  stats: Pid9002Frame | null | undefined,
+  excludedStatsClasses: ReadonlySet<string> = new Set()
+): ClassKpis {
+  const bestLaps = filterRowsByExcludedClasses(
+    bestLapsArray(stats),
+    excludedStatsClasses
+  )
   const bestSectors = bestSectorsArray(stats)
-  const leading = leadingArray(stats)
+  const leading = filterRowsByExcludedClasses(
+    leadingArray(stats),
+    excludedStatsClasses
+  )
 
   const fastestLap = pickFastestLap(bestLaps)
 
@@ -187,6 +239,167 @@ export function classKpis(stats: Pid9002Frame | null | undefined): ClassKpis {
     activeClasses: countActiveClasses(leading),
     leadingCount: leading.length,
   }
+}
+
+/**
+ * Distinct CLASS labels present in PID 9002, derived from
+ * `LEADING ∪ BESTLAPS ∪ BESTSECTORS`. The synthetic `TOTAL` row
+ * (case-insensitive) and empty / whitespace values are skipped, so the
+ * returned list is the set of real racing classes the spectator can
+ * filter on. Sorted alphabetically via `localeCompare`.
+ *
+ * Pure: never reads from any store.
+ */
+export function availableStatClasses(
+  stats: Pid9002Frame | null | undefined
+): string[] {
+  const seen = new Set<string>()
+  const collectFrom = (
+    rows:
+      | StatisticsLeadingRow[]
+      | StatisticsBestLapRow[]
+      | StatisticsBestSectorRow[]
+  ): void => {
+    for (const row of rows) {
+      if (!row || typeof row !== "object") {
+        continue
+      }
+      const cls = trimmedString(row.CLASS)
+      if (!cls) {
+        continue
+      }
+      if (cls.toLowerCase() === "total") {
+        continue
+      }
+      seen.add(cls)
+    }
+  }
+
+  collectFrom(leadingArray(stats))
+  collectFrom(bestLapsArray(stats))
+  collectFrom(bestSectorsArray(stats))
+
+  return Array.from(seen).sort((a, b) => a.localeCompare(b))
+}
+
+/** Tailwind opacity stop chosen by 1-based rank in the sorted bar chart. */
+export type BestLapOpacityStop = 100 | 80 | 60 | 40 | 20
+
+/** Floor for the bar fill — slow rows still render a visible nub. */
+const MIN_BAR_WIDTH_PCT = 20
+
+/** One row of the best-lap-per-class bar chart, ready for the renderer. */
+export type BestLapByClassRow = {
+  /** Class label, e.g. "SP9". */
+  classLabel: string
+  /** Car number string, trimmed; em-dash when missing. */
+  carNumber: string
+  /** Lap time in seconds. */
+  seconds: number
+  /** Display string via {@link formatLapSeconds}. */
+  display: string
+  /** 1-based rank within the sorted-fastest array. */
+  rank: number
+  /** Width percentage 0–100 for the bar fill (fastest = 100). Clamped to [20, 100]. */
+  widthPct: number
+  /** Tailwind opacity stop in {100, 80, 60, 40, 20} chosen by rank. */
+  opacityStop: BestLapOpacityStop
+  /** Day-time string from BESTLAPS row (raw); null if missing. */
+  dayTime: string | null
+}
+
+function opacityStopForRank(rank: number): BestLapOpacityStop {
+  switch (rank) {
+    case 1:
+      return 100
+    case 2:
+      return 80
+    case 3:
+      return 60
+    case 4:
+      return 40
+    default:
+      return 20
+  }
+}
+
+/**
+ * Build the per-class best-lap table sorted ascending by lap time (fastest first).
+ *
+ * - Source is `stats.BESTLAPS`.
+ * - Skips rows whose `CLASS` is empty / "TOTAL" (case-insensitive).
+ * - Applies {@link filterRowsByExcludedClasses} for the spectator filter.
+ * - Drops rows whose `LAPTIME` is unparseable or non-positive.
+ * - `widthPct = (fastestSeconds / row.seconds) * 100`, clamped to [20, 100] so
+ *   slow rows still render a visible nub.
+ * - `opacityStop` maps by rank: 1→100, 2→80, 3→60, 4→40, anything else→20
+ *   (per Stitch Fidelity Contract rule F7).
+ */
+export function bestLapsByClass(
+  stats: Pid9002Frame | null | undefined,
+  excludedStatsClasses: ReadonlySet<string> = new Set()
+): BestLapByClassRow[] {
+  const filtered = filterRowsByExcludedClasses(
+    bestLapsArray(stats),
+    excludedStatsClasses
+  )
+
+  type Parsed = {
+    classLabel: string
+    carNumber: string
+    seconds: number
+    dayTime: string | null
+  }
+
+  const parsed: Parsed[] = []
+  for (const row of filtered) {
+    if (!row || typeof row !== "object") {
+      continue
+    }
+    const classLabel = trimmedString(row.CLASS)
+    if (!classLabel) {
+      continue
+    }
+    if (classLabel.toUpperCase() === "TOTAL") {
+      continue
+    }
+    const seconds = parseLapTimeToSeconds(row.LAPTIME)
+    if (seconds === null || !Number.isFinite(seconds) || seconds <= 0) {
+      continue
+    }
+    parsed.push({
+      classLabel,
+      carNumber: trimmedString(row.NR) ?? EM_DASH,
+      seconds,
+      dayTime: trimmedString(row.DAYTIME),
+    })
+  }
+
+  if (parsed.length === 0) {
+    return []
+  }
+
+  parsed.sort((a, b) => a.seconds - b.seconds)
+  const fastest = parsed[0]!.seconds
+
+  return parsed.map((row, index) => {
+    const rank = index + 1
+    const rawPct = (fastest / row.seconds) * 100
+    const widthPct = Math.max(
+      MIN_BAR_WIDTH_PCT,
+      Math.min(100, Number.isFinite(rawPct) ? rawPct : 0)
+    )
+    return {
+      classLabel: row.classLabel,
+      carNumber: row.carNumber,
+      seconds: row.seconds,
+      display: formatLapSeconds(row.seconds),
+      rank,
+      widthPct,
+      opacityStop: opacityStopForRank(rank),
+      dayTime: row.dayTime,
+    }
+  })
 }
 
 /**

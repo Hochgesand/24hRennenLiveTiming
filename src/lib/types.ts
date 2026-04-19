@@ -9,6 +9,7 @@
  * | `3` | Race control messages (`MESSAGES`). |
  * | `4` | Track / session clock (`TRACKSTATE`, `TIMESTATE`, `ENDTIME`, …). |
  * | `501` | Top qualifying (`PRO`, `PROAM`). |
+ * | `7` | Per-car lap detail (`DATA[]` with `L`, `T`, sector keys). |
  * | `9002` | Statistics (`LEADING`, `BESTLAPS`, `BESTSECTORS`). |
  *
  * Use {@link LiveTimingPidFrame} for data frames; control frames are
@@ -164,12 +165,33 @@ export interface Pid9002Frame {
     | undefined
 }
 
+/** One row in PID 7 `DATA[]` (wire keys `L`, `T`, `S1`…`S9`, `V1`…`V9`). Aligns with `LapsDataRow` in lapTimes. */
+export type Pid7DataRow = {
+  L?: WireScalar
+  T?: WireScalar
+  [key: string]: WireScalar | undefined
+}
+
+/** PID 7 — per-car lap history (drilldown / laps view). */
+export interface Pid7Frame {
+  PID: "7"
+  EXPORTID?: string
+  HEATTYPE?: string
+  SESSION?: string
+  SECTORS?: WireScalar
+  TYPE?: WireScalar
+  N?: WireScalar
+  DATA?: Pid7DataRow[]
+  [key: string]: WireScalar | Pid7DataRow[] | undefined
+}
+
 /** All subscribed data frames (numeric string PIDs). */
 export type LiveTimingPidFrame =
   | Pid0Frame
   | Pid3Frame
   | Pid4Frame
   | Pid501Frame
+  | Pid7Frame
   | Pid9002Frame
 
 /** Parsed WebSocket JSON object with a `PID` (post–timesync data frames). */
@@ -214,4 +236,8 @@ export function isPid501Frame(msg: unknown): msg is Pid501Frame {
 
 export function isPid9002Frame(msg: unknown): msg is Pid9002Frame {
   return isJsonObject(msg) && msg.PID === "9002"
+}
+
+export function isPid7Frame(msg: unknown): msg is Pid7Frame {
+  return isJsonObject(msg) && msg.PID === "7"
 }

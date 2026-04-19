@@ -4,6 +4,7 @@ import { Leaderboard } from "@/components/Leaderboard"
 import { MessagesPanel } from "@/components/MessagesPanel"
 import { AppShell } from "@/components/shell/AppShell"
 import { StatsSubTabs } from "@/components/shell/StatsSubTabs"
+import { StatsClassFilter } from "@/components/stats/StatsClassFilter"
 import { StatsKpiStrip } from "@/components/stats/StatsKpiStrip"
 import { StatisticsPanel } from "@/components/StatisticsPanel"
 import { TopQualifyingPanel } from "@/components/TopQualifyingPanel"
@@ -47,6 +48,7 @@ export function AppShellRouter() {
         <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-6">
           {bp !== "mobile" ? <StatsSubTabs /> : null}
           <StatsKpiStrip />
+          <StatsClassFilter />
           <StatisticsPanel />
         </div>
       ) : null}

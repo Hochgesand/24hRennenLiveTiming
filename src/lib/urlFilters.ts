@@ -7,6 +7,14 @@ import {
 export const PARAM_EXC_CLASS = "excClass"
 export const PARAM_EXC_PRO = "excPro"
 export const PARAM_EXC_COL = "excCol"
+export const PARAM_EXC_STATS_CLASS = "excStatsClass"
+/**
+ * Long, human-friendly alias for {@link PARAM_EXC_STATS_CLASS}. Accepted on
+ * parse so the PRD's documented `?statsExcludedClasses=Cup3,V6` URL keeps
+ * working; we only ever **emit** the short `excStatsClass` key to stay
+ * consistent with the surrounding `excClass` / `excPro` convention.
+ */
+export const PARAM_EXC_STATS_CLASS_LEGACY = "statsExcludedClasses"
 /** Comma-separated whitelist of visible column keys (overrides `excCol` when present). */
 export const PARAM_COLS = "cols"
 
@@ -14,6 +22,7 @@ export type FilterUrlState = {
   excludedClasses: Set<string>
   excludedProams: Set<string>
   excludedColumns: Set<string>
+  excludedStatsClasses: Set<string>
 }
 
 export function splitCommaParam(value: string | null): string[] {
@@ -36,6 +45,14 @@ function excludedClassesFromParams(params: URLSearchParams): Set<string> {
 
 function excludedProamsFromParams(params: URLSearchParams): Set<string> {
   const merged = params.getAll(PARAM_EXC_PRO).flatMap((v) => splitCommaParam(v))
+  return new Set(merged)
+}
+
+function excludedStatsClassesFromParams(params: URLSearchParams): Set<string> {
+  const merged = [
+    ...params.getAll(PARAM_EXC_STATS_CLASS),
+    ...params.getAll(PARAM_EXC_STATS_CLASS_LEGACY),
+  ].flatMap((v) => splitCommaParam(v))
   return new Set(merged)
 }
 
@@ -88,6 +105,7 @@ export function parseFilterParamsFromSearch(search: string): FilterUrlState {
     excludedClasses: excludedClassesFromParams(params),
     excludedProams: excludedProamsFromParams(params),
     excludedColumns: excludedColumnsResolved(params),
+    excludedStatsClasses: excludedStatsClassesFromParams(params),
   }
 }
 
@@ -107,7 +125,8 @@ export function filterUrlStateEqual(a: FilterUrlState, b: FilterUrlState): boole
   return (
     setsEqual(a.excludedClasses, b.excludedClasses) &&
     setsEqual(a.excludedProams, b.excludedProams) &&
-    setsEqual(a.excludedColumns, b.excludedColumns)
+    setsEqual(a.excludedColumns, b.excludedColumns) &&
+    setsEqual(a.excludedStatsClasses, b.excludedStatsClasses)
   )
 }
 
@@ -130,6 +149,9 @@ export function applyFilterStateToSearchParams(
   }
   setOrDelete(PARAM_EXC_CLASS, state.excludedClasses)
   setOrDelete(PARAM_EXC_PRO, state.excludedProams)
+  setOrDelete(PARAM_EXC_STATS_CLASS, state.excludedStatsClasses)
+  // The long alias is parse-only; never emit it so we don't end up with both keys.
+  params.delete(PARAM_EXC_STATS_CLASS_LEGACY)
 
   const visible = visibleColumnsFromExcluded(state.excludedColumns)
   const defaultVisible = defaultVisibleColumnSet()

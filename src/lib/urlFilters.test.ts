@@ -5,6 +5,7 @@ import {
   PARAM_EXC_CLASS,
   PARAM_EXC_COL,
   PARAM_EXC_PRO,
+  PARAM_EXC_STATS_CLASS,
   filterUrlStateEqual,
   parseFilterParamsFromSearch,
   searchWithUpdatedFilters,
@@ -66,5 +67,47 @@ describe("parseFilterParamsFromSearch / searchWithUpdatedFilters", () => {
     expect(filterUrlStateEqual(parsed, again)).toBe(true)
     expect(next).toMatch(/excClass=A%2CB/)
     expect(next.includes("event=50")).toBe(true)
+  })
+
+  it("parses excludedStatsClasses from the short excStatsClass key", () => {
+    const parsed = parseFilterParamsFromSearch(`?${PARAM_EXC_STATS_CLASS}=SP9%2CCup3`)
+    expect([...parsed.excludedStatsClasses].sort()).toEqual(["Cup3", "SP9"])
+  })
+
+  it("parses excludedStatsClasses from the long statsExcludedClasses alias", () => {
+    const parsed = parseFilterParamsFromSearch("?statsExcludedClasses=V6")
+    expect([...parsed.excludedStatsClasses]).toEqual(["V6"])
+  })
+
+  it("merges both excStatsClass and statsExcludedClasses into one set", () => {
+    const parsed = parseFilterParamsFromSearch(
+      `?${PARAM_EXC_STATS_CLASS}=SP9&statsExcludedClasses=V6`
+    )
+    expect([...parsed.excludedStatsClasses].sort()).toEqual(["SP9", "V6"])
+  })
+
+  it("emits the short excStatsClass key (not the long alias) when serialising", () => {
+    const search = "?statsExcludedClasses=V6%2CSP9"
+    const parsed = parseFilterParamsFromSearch(search)
+    const next = searchWithUpdatedFilters(search, parsed)
+    expect(next).toMatch(/excStatsClass=SP9%2CV6/)
+    expect(next.includes("statsExcludedClasses=")).toBe(false)
+  })
+
+  it("round-trips a stats-class set while preserving leading event + config", () => {
+    const search = `?event=50&config=w3&${PARAM_EXC_STATS_CLASS}=Cup3%2CV6`
+    const parsed = parseFilterParamsFromSearch(search)
+    const next = searchWithUpdatedFilters(search, parsed)
+    const again = parseFilterParamsFromSearch(next)
+    expect(filterUrlStateEqual(parsed, again)).toBe(true)
+    expect(next.includes("event=50")).toBe(true)
+    expect(next.includes("config=w3")).toBe(true)
+    expect(next).toMatch(/excStatsClass=Cup3%2CV6/)
+  })
+
+  it("filterUrlStateEqual returns false when only excludedStatsClasses differs", () => {
+    const a = parseFilterParamsFromSearch("")
+    const b = parseFilterParamsFromSearch(`?${PARAM_EXC_STATS_CLASS}=SP9`)
+    expect(filterUrlStateEqual(a, b)).toBe(false)
   })
 })

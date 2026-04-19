@@ -26,6 +26,7 @@ function pickFilters(s: FilterSlice): FilterUrlState {
     excludedClasses: s.excludedClasses,
     excludedProams: s.excludedProams,
     excludedColumns: s.excludedColumns,
+    excludedStatsClasses: s.excludedStatsClasses,
   }
 }
 

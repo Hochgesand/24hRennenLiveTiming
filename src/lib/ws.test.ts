@@ -96,6 +96,25 @@ describe("LiveTimingClient (mock WebSocket)", () => {
     })
   })
 
+  it("merges subscribeExtras into the open frame (session, startingNo)", async () => {
+    const MockCtor = createMockCtor()
+    const client = new LiveTimingClient({
+      WebSocketImpl: MockCtor,
+      eventId: "50",
+      eventPid: [7],
+      subscribeExtras: { session: "4600101102", startingNo: "16" },
+    })
+    client.connect()
+
+    const ws = await flushOpen()
+    const open = JSON.parse(ws.sent[0]!) as Record<string, unknown>
+    expect(open.eventId).toBe("50")
+    expect(open.eventPid).toEqual([7])
+    expect(open.clientLocalTime).toBe(Date.now())
+    expect(open.session).toBe("4600101102")
+    expect(open.startingNo).toBe("16")
+  })
+
   it("after LTS_TIMESYNC, delivers PID 0 frames via onJson", async () => {
     const MockCtor = createMockCtor()
     const onTimesync = vi.fn()
