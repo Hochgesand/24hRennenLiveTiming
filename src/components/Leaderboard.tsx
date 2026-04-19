@@ -1,0 +1,279 @@
+import { ArrowDown, ArrowUp } from "lucide-react"
+
+import { parseChg } from "@/lib/chg"
+import { decodeLapStatus } from "@/domain"
+import { sectorColumnKey } from "@/lib/leaderboardColumns"
+import { filterLeaderboardRowsByExclusions, sortLeaderboardRows } from "@/lib/leaderboard"
+import type { RawResultRow } from "@/domain"
+import { cn } from "@/lib/utils"
+import { useFilterStore } from "@/store/useFilterStore"
+import { useLiveStore } from "@/store/useLiveStore"
+import { useUiStore } from "@/store/useUiStore"
+
+import { LeaderboardFilters } from "./LeaderboardFilters"
+import { SectorCell } from "./SectorCell"
+
+function str(v: unknown): string {
+  if (v === undefined || v === null) {
+    return ""
+  }
+  return String(v).trim()
+}
+
+function cell(v: unknown): string {
+  const s = str(v)
+  return s || "—"
+}
+
+function timeCell(row: RawResultRow, key: keyof RawResultRow): string {
+  return cell(row[key])
+}
+
+function hasSectorTimeValue(v: unknown): boolean {
+  return str(v) !== ""
+}
+
+/** Highest sector index (1–9) where any row has a non-empty `S{n}TIME`. */
+function computeMaxSectors(rows: RawResultRow[]): number {
+  let max = 0
+  for (let n = 1; n <= 9; n++) {
+    const key = `S${n}TIME` as keyof RawResultRow
+    if (rows.some((r) => hasSectorTimeValue(r[key]))) {
+      max = n
+    }
+  }
+  return max
+}
+
+function positionCellAriaLabel(row: RawResultRow): string {
+  const posLabel = str(row.POSITION) || "unknown"
+  const chg = parseChg(row.CHG)
+  if (chg === null) {
+    return `Position ${posLabel}`
+  }
+  if (chg === 0) {
+    return `Position ${posLabel}, no position change`
+  }
+  if (chg > 0) {
+    const p = chg === 1 ? "place" : "places"
+    return `Position ${posLabel}, up ${chg} ${p}`
+  }
+  const d = Math.abs(chg)
+  const p = d === 1 ? "place" : "places"
+  return `Position ${posLabel}, down ${d} ${p}`
+}
+
+function PositionChgVisual({ chg }: { chg: number | null }) {
+  if (chg === null || chg === 0) {
+    return <span className="text-muted-foreground">—</span>
+  }
+  const up = chg > 0
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-0.5 text-xs font-medium tabular-nums",
+        up ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"
+      )}
+    >
+      {up ? <ArrowUp className="size-3.5 shrink-0" aria-hidden /> : <ArrowDown className="size-3.5 shrink-0" aria-hidden />}
+      {Math.abs(chg)}
+    </span>
+  )
+}
+
+export function Leaderboard() {
+  const sessionMeta = useLiveStore((s) => s.sessionMeta)
+  const setSelectedStartingNo = useUiStore((s) => s.setSelectedStartingNo)
+  const excludedClasses = useFilterStore((s) => s.excludedClasses)
+  const excludedProams = useFilterStore((s) => s.excludedProams)
+  const excludedColumns = useFilterStore((s) => s.excludedColumns)
+  const results = sessionMeta?.RESULT
+
+  if (!sessionMeta?.RESULT?.length) {
+    return (
+      <div
+        className="text-muted-foreground rounded-xl border border-dashed px-4 py-8 text-center text-sm"
+        role="status"
+      >
+        No leaderboard data
+      </div>
+    )
+  }
+
+  const colHidden = (key: string) => excludedColumns.has(key.toLowerCase())
+
+  const sorted = sortLeaderboardRows(results)
+  const rows = filterLeaderboardRowsByExclusions(sorted, excludedClasses, excludedProams)
+  const maxSectors = computeMaxSectors(rows)
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col gap-3">
+      <LeaderboardFilters sourceRows={sorted} maxSectors={maxSectors} />
+      <div className="overflow-auto rounded-xl border">
+        <table className="w-full text-sm">
+          <thead className="bg-muted/95 sticky top-0 z-10 backdrop-blur">
+            <tr className="text-muted-foreground border-b text-left">
+              {!colHidden("pos") ? (
+                <th className="px-3 py-2 font-medium">Pos</th>
+              ) : null}
+              {!colHidden("num") ? (
+                <th className="px-3 py-2 font-medium">#</th>
+              ) : null}
+              {!colHidden("class") ? (
+                <th className="px-3 py-2 font-medium">Class</th>
+              ) : null}
+              {!colHidden("driver") ? (
+                <th className="px-3 py-2 font-medium">Driver</th>
+              ) : null}
+              {!colHidden("team") ? (
+                <th className="px-3 py-2 font-medium">Team</th>
+              ) : null}
+              {!colHidden("car") ? (
+                <th className="px-3 py-2 font-medium">Car</th>
+              ) : null}
+              {!colHidden("gap") ? (
+                <th className="px-3 py-2 text-right font-medium">Gap</th>
+              ) : null}
+              {!colHidden("last") ? (
+                <th className="px-3 py-2 text-right font-medium">Last</th>
+              ) : null}
+              {!colHidden("fast") ? (
+                <th className="px-3 py-2 text-right font-medium">Fastest</th>
+              ) : null}
+              {maxSectors > 0
+                ? Array.from({ length: maxSectors }, (_, i) => {
+                    const n = i + 1
+                    const sk = sectorColumnKey(n)
+                    if (colHidden(sk)) {
+                      return null
+                    }
+                    return (
+                      <th
+                        key={`S${n}`}
+                        className="px-3 py-2 text-right font-medium"
+                      >
+                        S{n}
+                      </th>
+                    )
+                  })
+                : null}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, i) => {
+              const team = str(row.TEAM)
+              const car = str(row.CAR)
+              const stnr = str(row.STNR)
+              const rowInteractive = stnr !== ""
+              const openRow = () => {
+                if (rowInteractive) {
+                  setSelectedStartingNo(stnr)
+                }
+              }
+              return (
+                <tr
+                  key={i}
+                  tabIndex={rowInteractive ? 0 : undefined}
+                  className={cn(
+                    "even:bg-muted/30 hover:bg-muted/50 border-b border-border/60 last:border-0",
+                    rowInteractive && "cursor-pointer"
+                  )}
+                  onClick={rowInteractive ? openRow : undefined}
+                  onKeyDown={
+                    rowInteractive
+                      ? (e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault()
+                            openRow()
+                          }
+                        }
+                      : undefined
+                  }
+                  aria-label={
+                    rowInteractive
+                      ? `Open lap details for ${str(row.NAME) || "driver"}, number ${stnr}`
+                      : undefined
+                  }
+                >
+                  {!colHidden("pos") ? (
+                    <td
+                      className="px-3 py-1.5 tabular-nums"
+                      aria-label={positionCellAriaLabel(row)}
+                    >
+                      <span className="inline-flex items-center gap-2" aria-hidden="true">
+                        <span>{cell(row.POSITION)}</span>
+                        <PositionChgVisual chg={parseChg(row.CHG)} />
+                      </span>
+                    </td>
+                  ) : null}
+                  {!colHidden("num") ? (
+                    <td className="px-3 py-1.5 tabular-nums">{cell(row.STNR)}</td>
+                  ) : null}
+                  {!colHidden("class") ? (
+                    <td className="px-3 py-1.5">{cell(row.CLASSNAME)}</td>
+                  ) : null}
+                  {!colHidden("driver") ? (
+                    <td className="px-3 py-1.5">{cell(row.NAME)}</td>
+                  ) : null}
+                  {!colHidden("team") ? (
+                    <td
+                      className="max-w-[8rem] truncate px-3 py-1.5"
+                      title={team || undefined}
+                    >
+                      {cell(row.TEAM)}
+                    </td>
+                  ) : null}
+                  {!colHidden("car") ? (
+                    <td
+                      className="max-w-[8rem] truncate px-3 py-1.5"
+                      title={car || undefined}
+                    >
+                      {cell(row.CAR)}
+                    </td>
+                  ) : null}
+                  {!colHidden("gap") ? (
+                    <td className="px-3 py-1.5 text-right font-mono text-sm tabular-nums">
+                      {cell(row.GAP)}
+                    </td>
+                  ) : null}
+                  {!colHidden("last") ? (
+                    <td className="px-3 py-1.5 text-right">
+                      <SectorCell
+                        time={timeCell(row, "LASTLAPTIME")}
+                        status={decodeLapStatus(row.LLTS)}
+                      />
+                    </td>
+                  ) : null}
+                  {!colHidden("fast") ? (
+                    <td className="px-3 py-1.5 text-right font-mono text-sm tabular-nums">
+                      {timeCell(row, "FASTESTLAP")}
+                    </td>
+                  ) : null}
+                  {maxSectors > 0
+                    ? Array.from({ length: maxSectors }, (_, i) => {
+                        const n = i + 1
+                        const sk = sectorColumnKey(n)
+                        if (colHidden(sk)) {
+                          return null
+                        }
+                        const timeKey = `S${n}TIME` as keyof RawResultRow
+                        const statusKey = `ST${n}T` as keyof RawResultRow
+                        return (
+                          <td key={`s-${n}`} className="px-3 py-1.5 text-right">
+                            <SectorCell
+                              time={timeCell(row, timeKey)}
+                              status={decodeLapStatus(row[statusKey])}
+                            />
+                          </td>
+                        )
+                      })
+                    : null}
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
