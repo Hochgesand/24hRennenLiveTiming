@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="de"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;800;900&amp;family=Inter:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .jetbrains { font-family: 'JetBrains Mono', monospace; }
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: #121314; }
+        ::-webkit-scrollbar-thumb { background: #343536; }
+        .bloom-red { filter: drop-shadow(0 0 8px rgba(227, 6, 19, 0.2)); }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-tertiary-fixed": "#311300",
+                      "on-error-container": "#ffdad6",
+                      "surface-variant": "#343536",
+                      "secondary": "#65df77",
+                      "surface": "#121314",
+                      "surface-container-highest": "#343536",
+                      "on-surface-variant": "#e9bcb6",
+                      "on-primary-fixed-variant": "#930007",
+                      "primary": "#ffb4aa",
+                      "on-tertiary": "#502400",
+                      "inverse-surface": "#e3e2e3",
+                      "on-primary-fixed": "#410001",
+                      "surface-container": "#1f2021",
+                      "on-secondary-container": "#00320d",
+                      "on-primary": "#690003",
+                      "tertiary": "#ffb787",
+                      "outline": "#af8782",
+                      "on-surface": "#e3e2e3",
+                      "tertiary-fixed-dim": "#ffb787",
+                      "secondary-fixed-dim": "#65df77",
+                      "error-container": "#93000a",
+                      "surface-tint": "#ffb4aa",
+                      "inverse-on-surface": "#303031",
+                      "surface-bright": "#38393a",
+                      "background": "#121314",
+                      "surface-container-low": "#1b1c1d",
+                      "secondary-fixed": "#82fc90",
+                      "on-background": "#e3e2e3",
+                      "surface-dim": "#121314",
+                      "primary-fixed": "#ffdad5",
+                      "tertiary-fixed": "#ffdcc7",
+                      "on-error": "#690005",
+                      "tertiary-container": "#b35800",
+                      "on-secondary-fixed": "#002107",
+                      "on-secondary": "#003911",
+                      "primary-container": "#e30613",
+                      "on-secondary-fixed-variant": "#00531c",
+                      "outline-variant": "#5e3f3b",
+                      "surface-container-lowest": "#0d0e0f",
+                      "primary-fixed-dim": "#ffb4aa",
+                      "on-tertiary-container": "#fff5f1",
+                      "surface-container-high": "#292a2b",
+                      "error": "#ffb4ab",
+                      "secondary-container": "#25a647",
+                      "on-tertiary-fixed-variant": "#723600",
+                      "on-primary-container": "#fff5f3",
+                      "inverse-primary": "#c0000c"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "fontFamily": {
+                      "headline": ["Space Grotesk"],
+                      "body": ["Inter"],
+                      "label": ["Inter"]
+              }
+            },
+          },
+        }
+    </script>
+</head>
+<body class="bg-surface text-on-surface font-body selection:bg-primary-container/30">
+<!-- TOP APP BAR -->
+<header class="bg-zinc-950/90 backdrop-blur-xl docked full-width top-0 z-50 shadow-[0_8px_32px_0_rgba(0,0,0,0.3)]">
+<div class="flex justify-between items-center w-full px-6 h-16">
+<div class="flex items-center gap-8">
+<span class="text-2xl font-black italic tracking-tighter text-red-600 font-headline uppercase">KINETIC EDGE | N24</span>
+<nav class="hidden md:flex gap-6 font-headline tracking-tight uppercase text-xs font-bold">
+<a class="text-zinc-400 hover:text-zinc-100 transition-colors" href="#">LIVE</a>
+<a class="text-zinc-400 hover:text-zinc-100 transition-colors" href="#">TELEMETRY</a>
+<a class="text-zinc-400 hover:text-zinc-100 transition-colors" href="#">STINT LOGS</a>
+<a class="text-zinc-400 hover:text-zinc-100 transition-colors" href="#">HISTORY</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<button class="hover:bg-zinc-800/50 transition-all duration-200 p-2 rounded">
+<span class="material-symbols-outlined text-zinc-400" data-icon="search">search</span>
+</button>
+<button class="hover:bg-zinc-800/50 transition-all duration-200 p-2 rounded">
+<span class="material-symbols-outlined text-zinc-400" data-icon="notifications">notifications</span>
+</button>
+<button class="hover:bg-zinc-800/50 transition-all duration-200 p-2 rounded">
+<span class="material-symbols-outlined text-zinc-400" data-icon="settings">settings</span>
+</button>
+</div>
+</div>
+</header>
+<!-- SIDE NAVIGATION -->
+<aside class="h-screen w-64 fixed left-0 top-0 overflow-hidden bg-zinc-950 pt-20 hidden lg:block">
+<div class="flex flex-col h-full py-8 space-y-2">
+<div class="px-6 mb-8">
+<h3 class="text-red-600 font-black font-headline text-xs tracking-widest uppercase mb-1">STRAT_OFFICER_01</h3>
+<p class="text-zinc-500 font-headline text-[10px] uppercase tracking-widest">Green Hell Control</p>
+</div>
+<a class="text-zinc-500 px-6 py-3 flex items-center gap-3 hover:text-zinc-200 transition-colors font-headline text-xs uppercase tracking-widest" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span>Cockpit</span>
+</a>
+<a class="text-zinc-500 px-6 py-3 flex items-center gap-3 hover:text-zinc-200 transition-colors font-headline text-xs uppercase tracking-widest" href="#">
+<span class="material-symbols-outlined" data-icon="leaderboard">leaderboard</span>
+<span>Leaderboard</span>
+</a>
+<a class="bg-red-600/10 text-red-600 border-l-4 border-red-600 px-6 py-3 flex items-center gap-3 font-headline text-xs uppercase tracking-widest" href="#">
+<span class="material-symbols-outlined" data-icon="analytics">analytics</span>
+<span>Statistik</span>
+</a>
+<a class="text-zinc-500 px-6 py-3 flex items-center gap-3 hover:text-zinc-200 transition-colors font-headline text-xs uppercase tracking-widest" href="#">
+<span class="material-symbols-outlined" data-icon="tire_repair">tire_repair</span>
+<span>Pit Lane</span>
+</a>
+<a class="text-zinc-500 px-6 py-3 flex items-center gap-3 hover:text-zinc-200 transition-colors font-headline text-xs uppercase tracking-widest" href="#">
+<span class="material-symbols-outlined" data-icon="cloudy_snowing">cloudy_snowing</span>
+<span>Weather</span>
+</a>
+<div class="mt-auto px-6 pb-24">
+<button class="w-full bg-primary-container text-on-primary-container py-3 font-headline text-[10px] font-black tracking-widest uppercase hover:opacity-90 transition-opacity">
+                    LIVE FEED
+                </button>
+</div>
+</div>
+</aside>
+<!-- MAIN CANVAS -->
+<main class="lg:ml-64 pt-16 min-h-screen pb-24 lg:pb-8">
+<!-- RESERVED PODIUM AREA -->
+<div class="h-14 lg:h-10 flex items-center px-6 bg-surface-container-lowest/50 border-b border-outline-variant/10">
+<div class="flex items-center gap-2 text-[10px] font-headline font-bold text-zinc-500 tracking-tighter uppercase">
+<span class="w-2 h-2 rounded-full bg-red-600 animate-pulse"></span>
+                LIVE_TELEMETRY_STREAM_CONNECTED
+            </div>
+</div>
+<!-- STATISTICS COCKPIT CONTENT -->
+<div class="p-6 space-y-6">
+<!-- HEADER & TAB BAR -->
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+<div>
+<h1 class="font-headline font-black text-4xl uppercase tracking-tighter text-on-surface">STATISTICS_COCKPIT</h1>
+<p class="text-zinc-500 font-label text-xs uppercase tracking-[0.2em] mt-1">TELEMETRY_ENGINE_V4.0</p>
+</div>
+<div class="flex gap-1 bg-surface-container-low p-1 rounded-sm">
+<button class="px-6 py-2 text-xs font-headline font-bold uppercase tracking-widest bg-primary-container text-on-primary-container">Statistik</button>
+<button class="px-6 py-2 text-xs font-headline font-bold uppercase tracking-widest text-zinc-500 hover:text-zinc-200 transition-colors">Verlauf</button>
+<button class="px-6 py-2 text-xs font-headline font-bold uppercase tracking-widest text-zinc-500 hover:text-zinc-200 transition-colors">Delta_AI</button>
+</div>
+</div>
+<!-- KPI STRIP -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+<div class="bg-surface-container-low p-4 border-l-2 border-red-600">
+<p class="text-[10px] font-headline font-bold text-zinc-500 uppercase tracking-widest mb-1">Schnellste Runde Rennen</p>
+<div class="flex items-baseline gap-2">
+<span class="jetbrains text-3xl font-bold text-on-surface tracking-tighter">7:54.218</span>
+<span class="text-[10px] font-headline text-red-600 font-bold uppercase">#911</span>
+</div>
+</div>
+<div class="bg-surface-container-low p-4 border-l-2 border-zinc-700">
+<p class="text-[10px] font-headline font-bold text-zinc-500 uppercase tracking-widest mb-1">Theoretische Bestzeit TOTAL</p>
+<div class="flex items-baseline gap-2">
+<span class="jetbrains text-3xl font-bold text-on-surface tracking-tighter">7:51.402</span>
+<span class="text-[10px] font-headline text-zinc-600 font-bold uppercase">Target</span>
+</div>
+</div>
+<div class="bg-surface-container-low p-4 border-l-2 border-secondary-container">
+<p class="text-[10px] font-headline font-bold text-zinc-500 uppercase tracking-widest mb-1">Δ Real -&gt; Theoretisch</p>
+<div class="flex items-baseline gap-2">
+<span class="jetbrains text-3xl font-bold text-secondary tracking-tighter">+2.816s</span>
+<span class="material-symbols-outlined text-secondary text-lg" data-icon="trending_up">trending_up</span>
+</div>
+</div>
+<div class="bg-surface-container-low p-4 border-l-2 border-zinc-700">
+<p class="text-[10px] font-headline font-bold text-zinc-500 uppercase tracking-widest mb-1">Aktive Klassen</p>
+<div class="flex items-baseline gap-2">
+<span class="jetbrains text-3xl font-bold text-on-surface tracking-tighter">14</span>
+<span class="text-[10px] font-headline text-zinc-600 font-bold uppercase">Live</span>
+</div>
+</div>
+</div>
+<!-- CLASS FILTER -->
+<div class="flex flex-wrap gap-2 items-center">
+<span class="text-[10px] font-headline font-bold text-zinc-500 uppercase tracking-widest mr-2">Filter_Klasse:</span>
+<button class="bg-primary-container text-on-primary-container px-3 py-1 text-[10px] font-headline font-black uppercase">TOTAL</button>
+<button class="bg-surface-container-highest text-on-surface px-3 py-1 text-[10px] font-headline font-bold uppercase hover:bg-zinc-700 transition-colors">SP9</button>
+<button class="bg-surface-container-highest text-on-surface px-3 py-1 text-[10px] font-headline font-bold uppercase hover:bg-zinc-700 transition-colors">SP-X</button>
+<button class="bg-surface-container-highest text-on-surface px-3 py-1 text-[10px] font-headline font-bold uppercase hover:bg-zinc-700 transition-colors">SP7</button>
+<button class="bg-surface-container-highest text-on-surface px-3 py-1 text-[10px] font-headline font-bold uppercase hover:bg-zinc-700 transition-colors">CUP2</button>
+<button class="bg-surface-container-highest text-on-surface px-3 py-1 text-[10px] font-headline font-bold uppercase hover:bg-zinc-700 transition-colors">V6</button>
+<button class="bg-surface-container-highest text-on-surface px-3 py-1 text-[10px] font-headline font-bold uppercase hover:bg-zinc-700 transition-colors">AT</button>
+<button class="bg-surface-container-highest text-on-surface px-3 py-1 text-[10px] font-headline font-bold uppercase hover:bg-zinc-700 transition-colors">VT2</button>
+</div>
+<!-- DATA ENGINE VISUALS -->
+<div class="grid grid-cols-1 lg:grid-cols-10 gap-6">
+<!-- CHART: Beste Runde pro Klasse (60%) -->
+<div class="lg:col-span-6 bg-surface-container-low p-6">
+<div class="flex justify-between items-center mb-6">
+<h3 class="font-headline font-bold text-sm uppercase tracking-widest text-zinc-300">Beste Runde pro Klasse</h3>
+<span class="material-symbols-outlined text-zinc-600 text-sm" data-icon="bar_chart">bar_chart</span>
+</div>
+<div class="space-y-4">
+<!-- Bar 1 -->
+<div class="space-y-1">
+<div class="flex justify-between text-[10px] font-headline font-bold uppercase tracking-tighter">
+<span class="text-zinc-400">TOTAL <span class="text-red-600">GT3</span></span>
+<span class="jetbrains text-zinc-100">7:54.218</span>
+</div>
+<div class="h-2 bg-zinc-900 overflow-hidden">
+<div class="h-full bg-red-600 w-full"></div>
+</div>
+</div>
+<!-- Bar 2 -->
+<div class="space-y-1">
+<div class="flex justify-between text-[10px] font-headline font-bold uppercase tracking-tighter">
+<span class="text-zinc-400">SP9 <span class="text-zinc-500">PRO</span></span>
+<span class="jetbrains text-zinc-100">7:58.441</span>
+</div>
+<div class="h-2 bg-zinc-900 overflow-hidden">
+<div class="h-full bg-red-600/80 w-[96%]"></div>
+</div>
+</div>
+<!-- Bar 3 -->
+<div class="space-y-1">
+<div class="flex justify-between text-[10px] font-headline font-bold uppercase tracking-tighter">
+<span class="text-zinc-400">SP-X <span class="text-zinc-500">SPEC</span></span>
+<span class="jetbrains text-zinc-100">8:02.115</span>
+</div>
+<div class="h-2 bg-zinc-900 overflow-hidden">
+<div class="h-full bg-red-600/60 w-[92%]"></div>
+</div>
+</div>
+<!-- Bar 4 -->
+<div class="space-y-1">
+<div class="flex justify-between text-[10px] font-headline font-bold uppercase tracking-tighter">
+<span class="text-zinc-400">CUP2 <span class="text-zinc-500">ONE_MAKE</span></span>
+<span class="jetbrains text-zinc-100">8:15.980</span>
+</div>
+<div class="h-2 bg-zinc-900 overflow-hidden">
+<div class="h-full bg-red-600/40 w-[85%]"></div>
+</div>
+</div>
+<!-- Bar 5 -->
+<div class="space-y-1">
+<div class="flex justify-between text-[10px] font-headline font-bold uppercase tracking-tighter">
+<span class="text-zinc-400">SP7 <span class="text-zinc-500">GT_CUP</span></span>
+<span class="jetbrains text-zinc-100">8:22.404</span>
+</div>
+<div class="h-2 bg-zinc-900 overflow-hidden">
+<div class="h-full bg-red-600/20 w-[78%]"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- HEATMAP MATRIX: Beste Sektor-Splits (40%) -->
+<div class="lg:col-span-4 bg-surface-container-low p-6 overflow-hidden">
+<div class="flex justify-between items-center mb-6">
+<h3 class="font-headline font-bold text-sm uppercase tracking-widest text-zinc-300">Beste Sektor-Splits pro Klasse</h3>
+<span class="material-symbols-outlined text-zinc-600 text-sm" data-icon="grid_on">grid_on</span>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-[10px] uppercase font-headline tracking-tighter border-separate border-spacing-px">
+<thead>
+<tr class="text-zinc-500">
+<th class="pb-2 text-left">KLS</th>
+<th class="pb-2">S1</th>
+<th class="pb-2">S2</th>
+<th class="pb-2">S3</th>
+<th class="pb-2">S4</th>
+<th class="pb-2">LAP</th>
+</tr>
+</thead>
+<tbody class="jetbrains text-center">
+<tr>
+<td class="bg-zinc-900 py-2 text-left font-headline font-bold pr-2">SP9</td>
+<td class="bg-red-600 text-white font-bold py-2">81.2</td>
+<td class="bg-red-600/80 py-2">94.5</td>
+<td class="bg-red-600/90 py-2">122</td>
+<td class="bg-red-600/70 py-2">76.3</td>
+<td class="bg-zinc-800 py-2">7:54</td>
+</tr>
+<tr>
+<td class="bg-zinc-900 py-2 text-left font-headline font-bold pr-2">SP-X</td>
+<td class="bg-red-600/70 py-2">82.5</td>
+<td class="bg-red-600/90 py-2">95.1</td>
+<td class="bg-red-600/60 py-2">124</td>
+<td class="bg-red-600 py-2">75.9</td>
+<td class="bg-zinc-800 py-2">8:02</td>
+</tr>
+<tr>
+<td class="bg-zinc-900 py-2 text-left font-headline font-bold pr-2">CUP2</td>
+<td class="bg-red-600/40 py-2">85.4</td>
+<td class="bg-red-600/50 py-2">99.8</td>
+<td class="bg-red-600/30 py-2">131</td>
+<td class="bg-red-600/40 py-2">81.2</td>
+<td class="bg-zinc-800 py-2">8:15</td>
+</tr>
+<tr>
+<td class="bg-zinc-900 py-2 text-left font-headline font-bold pr-2">SP7</td>
+<td class="bg-red-600/30 py-2">86.2</td>
+<td class="bg-red-600/40 py-2">102</td>
+<td class="bg-red-600/20 py-2">135</td>
+<td class="bg-red-600/30 py-2">82.8</td>
+<td class="bg-zinc-800 py-2">8:22</td>
+</tr>
+<tr>
+<td class="bg-zinc-900 py-2 text-left font-headline font-bold pr-2">V6</td>
+<td class="bg-red-600/10 py-2">92.1</td>
+<td class="bg-red-600/20 py-2">112</td>
+<td class="bg-red-600/10 py-2">148</td>
+<td class="bg-red-600/10 py-2">89.4</td>
+<td class="bg-zinc-800 py-2">9:10</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<!-- LEADING TABLE -->
+<div class="bg-surface-container-low overflow-hidden">
+<div class="p-6 flex justify-between items-center bg-surface-container-high/30">
+<h3 class="font-headline font-bold text-sm uppercase tracking-widest text-zinc-300">Klassen-Führende</h3>
+<div class="flex gap-4">
+<span class="text-[10px] font-headline text-zinc-500 uppercase tracking-widest">Update: <span class="text-zinc-300 jetbrains">16:42:04</span></span>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="text-[10px] font-headline font-bold text-zinc-500 uppercase tracking-widest bg-zinc-900/50">
+<th class="px-6 py-4">Klasse</th>
+<th class="px-6 py-4">#</th>
+<th class="px-6 py-4">Fahrer/Team</th>
+<th class="px-6 py-4">Runden</th>
+<th class="px-6 py-4">Gap</th>
+<th class="px-6 py-4 text-right">Zeit gesamt</th>
+</tr>
+</thead>
+<tbody class="jetbrains text-xs">
+<tr class="bg-surface-container-lowest/40 hover:bg-zinc-800/50 transition-colors">
+<td class="px-6 py-4 text-red-600 font-bold font-headline">SP9</td>
+<td class="px-6 py-4 text-zinc-400">#911</td>
+<td class="px-6 py-4 font-headline uppercase font-semibold">Manthey EMA / Grello</td>
+<td class="px-6 py-4">124</td>
+<td class="px-6 py-4 text-secondary-container">Leader</td>
+<td class="px-6 py-4 text-right">16:41:22.401</td>
+</tr>
+<tr class="bg-surface-container-low hover:bg-zinc-800/50 transition-colors">
+<td class="px-6 py-4 text-red-600 font-bold font-headline">SP-X</td>
+<td class="px-6 py-4 text-zinc-400">#706</td>
+<td class="px-6 py-4 font-headline uppercase font-semibold">Glickenhaus Racing</td>
+<td class="px-6 py-4">122</td>
+<td class="px-6 py-4 text-zinc-500">+2 Laps</td>
+<td class="px-6 py-4 text-right">16:42:01.884</td>
+</tr>
+<tr class="bg-surface-container-lowest/40 hover:bg-zinc-800/50 transition-colors">
+<td class="px-6 py-4 text-red-600 font-bold font-headline">CUP2</td>
+<td class="px-6 py-4 text-zinc-400">#121</td>
+<td class="px-6 py-4 font-headline uppercase font-semibold">Black Falcon Team</td>
+<td class="px-6 py-4">118</td>
+<td class="px-6 py-4 text-zinc-500">+6 Laps</td>
+<td class="px-6 py-4 text-right">16:41:55.332</td>
+</tr>
+<tr class="bg-surface-container-low hover:bg-zinc-800/50 transition-colors">
+<td class="px-6 py-4 text-red-600 font-bold font-headline">SP7</td>
+<td class="px-6 py-4 text-zinc-400">#80</td>
+<td class="px-6 py-4 font-headline uppercase font-semibold">Huber Motorsport</td>
+<td class="px-6 py-4">115</td>
+<td class="px-6 py-4 text-zinc-500">+9 Laps</td>
+<td class="px-6 py-4 text-right">16:43:02.110</td>
+</tr>
+<tr class="bg-surface-container-lowest/40 hover:bg-zinc-800/50 transition-colors">
+<td class="px-6 py-4 text-red-600 font-bold font-headline">VT2</td>
+<td class="px-6 py-4 text-zinc-400">#333</td>
+<td class="px-6 py-4 font-headline uppercase font-semibold">Adrenalin Motorsport</td>
+<td class="px-6 py-4">108</td>
+<td class="px-6 py-4 text-zinc-500">+16 Laps</td>
+<td class="px-6 py-4 text-right">16:42:44.908</td>
+</tr>
+<tr class="bg-surface-container-low hover:bg-zinc-800/50 transition-colors">
+<td class="px-6 py-4 text-red-600 font-bold font-headline">V6</td>
+<td class="px-6 py-4 text-zinc-400">#396</td>
+<td class="px-6 py-4 font-headline uppercase font-semibold">W&amp;S Motorsport</td>
+<td class="px-6 py-4">105</td>
+<td class="px-6 py-4 text-zinc-500">+19 Laps</td>
+<td class="px-6 py-4 text-right">16:41:12.772</td>
+</tr>
+<tr class="bg-surface-container-lowest/40 hover:bg-zinc-800/50 transition-colors">
+<td class="px-6 py-4 text-red-600 font-bold font-headline">AT</td>
+<td class="px-6 py-4 text-zinc-400">#420</td>
+<td class="px-6 py-4 font-headline uppercase font-semibold">Four Motors Bioconcept</td>
+<td class="px-6 py-4">102</td>
+<td class="px-6 py-4 text-zinc-500">+22 Laps</td>
+<td class="px-6 py-4 text-right">16:44:00.155</td>
+</tr>
+<tr class="bg-surface-container-low hover:bg-zinc-800/50 transition-colors">
+<td class="px-6 py-4 text-red-600 font-bold font-headline">SP3T</td>
+<td class="px-6 py-4 text-zinc-400">#10</td>
+<td class="px-6 py-4 font-headline uppercase font-semibold">Max Kruse Racing</td>
+<td class="px-6 py-4">98</td>
+<td class="px-6 py-4 text-zinc-500">+26 Laps</td>
+<td class="px-6 py-4 text-right">16:41:33.441</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</main>
+<!-- BOTTOM NAV (MOBILE) -->
+<nav class="fixed bottom-0 w-full z-50 border-t border-zinc-800/50 md:hidden bg-zinc-950/95 backdrop-blur-md">
+<div class="flex justify-around items-center px-4 py-2">
+<a class="flex flex-col items-center justify-center text-zinc-500 py-1 px-4 active:bg-zinc-800 scale-95 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="speed">speed</span>
+<span class="font-['Inter'] font-semibold text-[10px]">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-red-500 bg-red-950/20 rounded-lg py-1 px-4 scale-95 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="analytics">analytics</span>
+<span class="font-['Inter'] font-semibold text-[10px]">Stats</span>
+</a>
+<a class="flex flex-col items-center justify-center text-zinc-500 py-1 px-4 active:bg-zinc-800 scale-95 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="warning">warning</span>
+<span class="font-['Inter'] font-semibold text-[10px]">Alerts</span>
+</a>
+<a class="flex flex-col items-center justify-center text-zinc-500 py-1 px-4 active:bg-zinc-800 scale-95 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-['Inter'] font-semibold text-[10px]">Profile</span>
+</a>
+</div>
+</nav>
+</body></html>

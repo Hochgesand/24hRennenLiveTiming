@@ -44,6 +44,40 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
+
+  /* Stitch Material 3 colour tokens — exposed so copy/pasted Stitch HTML
+     class lists (`bg-surface-container-low`, `text-on-primary-container`,
+     `border-outline-variant`, …) resolve out-of-the-box. Per PRD F6. */
+  --color-surface: var(--stitch-surface);
+  --color-surface-container: var(--stitch-surface-container);
+  --color-surface-container-low: var(--stitch-surface-container-low);
+  --color-surface-container-lowest: var(--stitch-surface-container-lowest);
+  --color-surface-container-high: var(--stitch-surface-container-high);
+  --color-surface-container-highest: var(--stitch-surface-container-highest);
+  --color-surface-variant: var(--stitch-surface-variant);
+  --color-surface-bright: var(--stitch-surface-bright);
+  --color-surface-dim: var(--stitch-surface-dim);
+
+  --color-primary-container: var(--stitch-primary-container);
+  --color-on-primary-container: var(--stitch-on-primary-container);
+  --color-secondary-container: var(--stitch-secondary-container);
+  --color-on-secondary-container: var(--stitch-on-secondary-container);
+  --color-tertiary-container: var(--stitch-tertiary-container);
+  --color-on-tertiary-container: var(--stitch-on-tertiary-container);
+
+  --color-tertiary: var(--stitch-tertiary);
+
+  --color-outline: var(--stitch-outline);
+  --color-outline-variant: var(--stitch-outline-variant);
+
+  --color-on-surface: var(--stitch-on-surface);
+  --color-on-surface-variant: var(--stitch-on-surface-variant);
+  --color-on-background: var(--stitch-on-background);
+
+  /* Stitch fontFamily aliases (Stitch tailwind.config: headline / body / label) */
+  --font-headline: var(--font-display);
+  --font-body: var(--font-sans);
+  --font-label: var(--font-sans);
 }
 
 :root {
@@ -76,6 +110,8 @@
   --stitch-secondary-fixed-dim: #65df77;
   --stitch-tertiary: #ffb787;
   --stitch-tertiary-container: #b35800;
+  --stitch-on-tertiary-container: #fff5f1;
+  --stitch-on-secondary-container: #00320d;
   --stitch-outline: #af8782;
   --stitch-outline-variant: #5e3f3b;
   --stitch-error: #ffb4ab;
