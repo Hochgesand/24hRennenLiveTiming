@@ -72,7 +72,14 @@ export const STRINGS: Record<
     "drilldown.telemetry.placeholder": "Reserviert für zukünftige Telemetrie.",
     "drilldown.avgRef": "Referenz-Durchschnitt",
     "trackmap.title": "Sektoren-Heatmap",
-    "trackmap.hint": "Schematische Nordschleife+GP — Farben aus letzter Runden-Sektoren-Status (Beispiel).",
+    "trackmap.hint":
+      "24h Nürburgring Gesamtstrecke (Grand-Prix + Nordschleife, ~25,378 km). Farben zeigen den Sektor-Status der letzten Runde der Führung. Scrollen und Zoomen für Details.",
+    "trackmap.zoomAria": "Zoom-Steuerung",
+    "trackmap.zoomIn": "Hineinzoomen",
+    "trackmap.zoomOut": "Herauszoomen",
+    "trackmap.zoomReset": "Zoom zurücksetzen",
+    "trackmap.attribution":
+      "Streckenlayout: „Circuit Nürburgring-2002-24h.svg“ von Pitlane02, Wikimedia Commons, CC BY-SA 3.0.",
     "shell.liveState.connected": "LIVE_TELEMETRY_STREAM_CONNECTED",
     "shell.liveState.connecting": "LIVE_TELEMETRY_STREAM_CONNECTING…",
     "shell.liveState.reconnecting": "LIVE_TELEMETRY_STREAM_RECONNECTING…",
@@ -219,7 +226,13 @@ export const STRINGS: Record<
     "drilldown.avgRef": "Reference average",
     "trackmap.title": "Sector heatmap",
     "trackmap.hint":
-      "Schematic Nordschleife+GP — colours from last-lap sector status (illustrative).",
+      "24h Nürburgring combined circuit (Grand Prix + Nordschleife, ~25.378 km). Colours show the leader's last-lap sector status. Scroll and zoom for detail.",
+    "trackmap.zoomAria": "Zoom controls",
+    "trackmap.zoomIn": "Zoom in",
+    "trackmap.zoomOut": "Zoom out",
+    "trackmap.zoomReset": "Reset zoom",
+    "trackmap.attribution":
+      "Track layout: \"Circuit Nürburgring-2002-24h.svg\" by Pitlane02, Wikimedia Commons, CC BY-SA 3.0.",
     "shell.liveState.connected": "LIVE_TELEMETRY_STREAM_CONNECTED",
     "shell.liveState.connecting": "LIVE_TELEMETRY_STREAM_CONNECTING…",
     "shell.liveState.reconnecting": "LIVE_TELEMETRY_STREAM_RECONNECTING…",
