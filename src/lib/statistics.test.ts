@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { classKpis } from "@/lib/statistics"
+import { classKpis, formatDeltaSeconds } from "@/lib/statistics"
 import type { Pid9002Frame } from "@/lib/types"
 
 function frame(
@@ -166,5 +166,32 @@ describe("classKpis", () => {
 
     expect(classKpis(onlyLap).deltaSeconds).toBeNull()
     expect(classKpis(onlySectors).deltaSeconds).toBeNull()
+  })
+})
+
+describe("formatDeltaSeconds", () => {
+  it("prepends a + and appends ' s' for positive deltas", () => {
+    expect(formatDeltaSeconds(1.234)).toBe("+1.234 s")
+    expect(formatDeltaSeconds(2.816)).toBe("+2.816 s")
+  })
+
+  it("uses the typographic minus glyph (U+2212) for negative deltas", () => {
+    expect(formatDeltaSeconds(-2.5)).toBe("\u22122.500 s")
+    expect(formatDeltaSeconds(-1.234)).toBe("\u22121.234 s")
+  })
+
+  it("returns ±0 s for zero or sub-millisecond deltas", () => {
+    expect(formatDeltaSeconds(0)).toBe("\u00b10 s")
+    expect(formatDeltaSeconds(0.0001)).toBe("\u00b10 s")
+    expect(formatDeltaSeconds(-0.0009)).toBe("\u00b10 s")
+  })
+
+  it("formats deltas larger than a minute with the m:ss.SSS layout", () => {
+    expect(formatDeltaSeconds(75.5)).toBe("+1:15.500 s")
+  })
+
+  it("returns em-dash for non-finite inputs", () => {
+    expect(formatDeltaSeconds(Number.NaN)).toBe("—")
+    expect(formatDeltaSeconds(Number.POSITIVE_INFINITY)).toBe("—")
   })
 })

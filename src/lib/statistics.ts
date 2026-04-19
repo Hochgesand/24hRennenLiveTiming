@@ -188,3 +188,27 @@ export function classKpis(stats: Pid9002Frame | null | undefined): ClassKpis {
     leadingCount: leading.length,
   }
 }
+
+/**
+ * Format a signed delta (in seconds) for the "Δ Real → Theoretisch" KPI.
+ *
+ * Always renders an explicit sign so the analyst sees direction at a glance:
+ *   +1.234 → unused potential (real slower than theoretical)
+ *   −1.234 → real beat the theoretical (rare; only with stale sectors)
+ *   ±0     → identical (or rounded to <1 ms)
+ *
+ * Uses the typographic minus glyph (U+2212) to match the Stitch design.
+ */
+export function formatDeltaSeconds(sec: number): string {
+  if (!Number.isFinite(sec)) {
+    return "—"
+  }
+  const formatted = formatLapSeconds(Math.abs(sec))
+  if (Math.abs(sec) < 0.001) {
+    return "±0 s"
+  }
+  if (sec > 0) {
+    return `+${formatted} s`
+  }
+  return `−${formatted} s`
+}

@@ -89,6 +89,13 @@ export const STRINGS: Record<
     "stats.kpi.ariaLabel": "KPI-Übersicht",
     "stats.kpi.fastestLap.caption": "Schnellste Runde",
     "stats.kpi.fastestLap.noData": "Keine Daten",
+    "stats.kpi.theoreticalBest.caption": "Theoretische Bestzeit",
+    "stats.kpi.theoreticalBest.sub": "TOTAL COMBINED",
+    "stats.kpi.delta.caption": "Δ Real → Theoretisch",
+    "stats.kpi.delta.sub": "POTENZIAL",
+    "stats.kpi.activeClasses.caption": "Aktive Klassen",
+    "stats.kpi.activeClasses.subSuffix": "LEADING",
+    "stats.kpi.activeClasses.noData": "KEINE DATEN",
   },
   en: {
     "app.title": "Live timing",
@@ -176,6 +183,13 @@ export const STRINGS: Record<
     "stats.kpi.ariaLabel": "KPI overview",
     "stats.kpi.fastestLap.caption": "Fastest lap",
     "stats.kpi.fastestLap.noData": "No data",
+    "stats.kpi.theoreticalBest.caption": "Theoretical best",
+    "stats.kpi.theoreticalBest.sub": "TOTAL COMBINED",
+    "stats.kpi.delta.caption": "Δ Real → Theoretical",
+    "stats.kpi.delta.sub": "POTENTIAL",
+    "stats.kpi.activeClasses.caption": "Active classes",
+    "stats.kpi.activeClasses.subSuffix": "LEADING",
+    "stats.kpi.activeClasses.noData": "NO DATA",
   },
 }
 
