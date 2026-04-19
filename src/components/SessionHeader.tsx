@@ -16,8 +16,8 @@ function connectionStatusIndicator(status: ConnectionStatus): { dotClass: string
       }
     case "connected":
       return {
-        dotClass: "bg-emerald-500 shadow-[0_0_6px_rgba(34,197,94,0.5)]",
-        labelClass: "text-emerald-700 dark:text-emerald-300",
+        dotClass: "bg-[#22d3ee] shadow-[0_0_10px_rgba(34,211,238,0.45)]",
+        labelClass: "text-[#a5f3fc]",
         label: "Connected",
       }
     case "error":
@@ -148,7 +148,7 @@ export function SessionHeader() {
   const connUi = connectionStatusIndicator(connection.status)
 
   return (
-    <header className="border-border flex min-h-14 flex-col justify-center gap-2 border-b px-4 py-3">
+    <header className="flex min-h-14 flex-col justify-center gap-2 border-b border-white/[0.08] bg-[#101419] px-4 py-3">
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
           {missingEvent ? (
@@ -165,7 +165,7 @@ export function SessionHeader() {
             <p className="text-muted-foreground text-sm">Waiting for data…</p>
           ) : (
             <>
-              <div className="text-lg font-semibold leading-tight">
+              <div className="font-display text-xl font-semibold leading-tight tracking-tight text-[#e0e2ea]">
                 {primaryLine.length > 0 ? (
                   primaryLine
                 ) : (

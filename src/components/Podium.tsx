@@ -39,7 +39,7 @@ function ChgIndicator({ row }: { row: RawResultRow }) {
     <span
       className={cn(
         "inline-flex items-center gap-0.5 text-xs font-medium tabular-nums",
-        up ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"
+        up ? "text-[#9ddf2e]" : "text-[#fb7185]"
       )}
       title={`Δ ${chg > 0 ? "+" : ""}${chg}`}
     >
@@ -65,10 +65,10 @@ function PodiumCard({
   return (
     <div
       className={cn(
-        "bg-card flex min-w-0 max-w-[11rem] flex-1 flex-col rounded-xl border px-3 py-3 shadow-sm",
+        "flex min-w-0 max-w-[11rem] flex-1 flex-col rounded-xl border border-white/[0.08] bg-[#1c2025] px-3 py-3",
         elevated
-          ? "scale-105 border-amber-500/50 md:min-h-[9.5rem]"
-          : "border-border scale-100 md:min-h-[8rem]"
+          ? "scale-105 border-amber-400/45 shadow-[0_0_28px_rgba(34,211,238,0.14)] md:min-h-[9.5rem]"
+          : "border-white/10 scale-100 md:min-h-[8rem]"
       )}
     >
       <div className="mb-2 flex items-center justify-between gap-2">

@@ -48,10 +48,10 @@ function App() {
   )
 
   return (
-    <div className="bg-background text-foreground flex min-h-svh flex-col">
+    <div className="text-foreground flex min-h-svh flex-col">
       <CarDrilldownDialog />
       <SessionHeader />
-      <main className="flex min-h-0 flex-1 flex-col gap-4 p-4">
+      <main className="flex min-h-0 flex-1 flex-col gap-4 bg-[#181c21]/80 p-4">
         {isMdUp ? (
           isLgUp ? (
             <div className="grid min-h-0 flex-1 grid-cols-[1fr_320px] items-stretch gap-4">

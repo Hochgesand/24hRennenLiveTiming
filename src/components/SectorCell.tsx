@@ -3,10 +3,9 @@ import type { LapSectorStatus } from "@/domain"
 
 const statusClass: Record<LapSectorStatus, string> = {
   sessionBest:
-    "bg-violet-500/15 text-violet-950 dark:bg-violet-500/20 dark:text-violet-100",
-  personalBest:
-    "bg-emerald-500/15 text-emerald-950 dark:bg-emerald-500/20 dark:text-emerald-100",
-  pit: "bg-amber-500/20 text-amber-950 dark:bg-amber-500/25 dark:text-amber-100",
+    "bg-[#22d3ee]/15 text-[#a5f3fc] ring-1 ring-[#22d3ee]/25",
+  personalBest: "bg-[#9ddf2e]/15 text-[#d9f99d] ring-1 ring-[#9ddf2e]/20",
+  pit: "bg-[#f59e0b]/20 text-amber-100 ring-1 ring-[#f59e0b]/25",
   inLap: "bg-muted/60 text-muted-foreground",
   outLap: "bg-muted/60 text-muted-foreground",
   normal: "bg-transparent",
