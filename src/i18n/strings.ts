@@ -86,6 +86,9 @@ export const STRINGS: Record<
     "shell.subTabs.comingSoon": "Kommt in v2",
     "shell.sideNav.cockpit": "Cockpit",
     "shell.sideNav.brandSubtitle": "Green Hell Control",
+    "stats.kpi.ariaLabel": "KPI-Übersicht",
+    "stats.kpi.fastestLap.caption": "Schnellste Runde",
+    "stats.kpi.fastestLap.noData": "Keine Daten",
   },
   en: {
     "app.title": "Live timing",
@@ -170,6 +173,9 @@ export const STRINGS: Record<
     "shell.subTabs.comingSoon": "Coming in v2",
     "shell.sideNav.cockpit": "Cockpit",
     "shell.sideNav.brandSubtitle": "Green Hell Control",
+    "stats.kpi.ariaLabel": "KPI overview",
+    "stats.kpi.fastestLap.caption": "Fastest lap",
+    "stats.kpi.fastestLap.noData": "No data",
   },
 }
 

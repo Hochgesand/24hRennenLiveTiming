@@ -28,17 +28,17 @@ Mono for numerics, sharp `ROUND_FOUR` corners — and three breakpoint-specific
 shells:
 
 - **Desktop (≥1280)** — tabbed full-bleed layout with a persistent header
-  (event title, session timer, track state, WebSocket dot) and a slim podium
-  ribbon. Tabs: Leaderboard, Stats, Messages, Track Map, STQ (conditional).
-  Drilldown opens as a centered modal. Filters/columns live in a right-side
-  drawer.
+(event title, session timer, track state, WebSocket dot) and a slim podium
+ribbon. Tabs: Leaderboard, Stats, Messages, Track Map, STQ (conditional).
+Drilldown opens as a centered modal. Filters/columns live in a right-side
+drawer.
 - **Tablet (≥768, <1280, portrait 1024×1366)** — same tab pattern, denser
-  cells, podium ribbon collapses to a 2-row carousel after first scroll,
-  drilldown opens as a bottom sheet.
+cells, podium ribbon collapses to a 2-row carousel after first scroll,
+drilldown opens as a bottom sheet.
 - **Mobile (<768, target 390×844)** — bottom tab bar with 4 tabs (Race / Stats
-  / Messages / Settings), compact session bar, mini horizontal-scrolling
-  podium, drilldown as a 90 %-height bottom sheet with handle, safe-area
-  padding.
+/ Messages / Settings), compact session bar, mini horizontal-scrolling
+podium, drilldown as a 90 %-height bottom sheet with handle, safe-area
+padding.
 
 The car drilldown gains a fully-formed content set: header, KPI strip, lap-time
 line chart with PB and stint-avg reference lines, sector matrix, driver-stint
@@ -226,9 +226,9 @@ primary UI language, English available via in-code i18n.
 
 ### Performance + acceptance
 
-- [ ] **44.** As an operator, I want desktop and mobile builds to score ≥ 90 in
-    Lighthouse performance, so that the dashboard remains snappy on broadcast
-    laptops and on phones over LTE. **[offen]** — Audit in CI / lokal noch nicht fest verdrahtet.
+- **44.** As an operator, I want desktop and mobile builds to score ≥ 90 in
+  Lighthouse performance, so that the dashboard remains snappy on broadcast
+  laptops and on phones over LTE. **[offen]** — Audit in CI / lokal noch nicht fest verdrahtet.
 
 ~~45. As an operator, I want the dashboard to remain a static, zero-backend SPA
     after the redesign, so that I can keep deploying it to a CDN / GitHub
@@ -241,104 +241,104 @@ primary UI language, English available via in-code i18n.
 **New deep modules** (small, testable, stable interface):
 
 - **Design tokens module.** A pure CSS-vars + Tailwind-config pair derived
-  from the locked Stitch DS. Exposes semantic names (`--background`,
-  `--surface-container-low`, `--primary`, `--positive`, `--hazard`,
-  `--sector-session-best`, …). Shadcn variables are remapped onto these.
-- **`<DataNumeric>` primitive.** Single React component that takes a value
-  and a `kind` (`lapTime` | `sector` | `gap` | `delta` | `position` | `int`).
-  Encapsulates monospace font, `tabular-nums`, decimal alignment, sign
-  coloring, lap-notation switch. All numeric rendering in the app must go
-  through this component.
-- **`useBreakpoint()` hook.** Single hook returning
-  `'mobile' | 'tablet' | 'desktop'`. Encapsulates `matchMedia`, SSR safety,
-  and the Tailwind `md`/`lg` cutoffs. Replaces the current ad-hoc
-  `useMediaQuery` calls in `App.tsx`.
-- **`SectorCell` / `StatusChip` color map.** Pure mapping from the
-  `decodeStatusCode` enum to a Tailwind class set. Lives next to the decoder
-  so the wire-side enum and the view-side colors cannot drift.
+from the locked Stitch DS. Exposes semantic names (`--background`,
+`--surface-container-low`, `--primary`, `--positive`, `--hazard`,
+`--sector-session-best`, …). Shadcn variables are remapped onto these.
+- `**<DataNumeric>` primitive.** Single React component that takes a value
+and a `kind` (`lapTime` | `sector` | `gap` | `delta` | `position` | `int`).
+Encapsulates monospace font, `tabular-nums`, decimal alignment, sign
+coloring, lap-notation switch. All numeric rendering in the app must go
+through this component.
+- `**useBreakpoint()` hook.** Single hook returning
+`'mobile' | 'tablet' | 'desktop'`. Encapsulates `matchMedia`, SSR safety,
+and the Tailwind `md`/`lg` cutoffs. Replaces the current ad-hoc
+`useMediaQuery` calls in `App.tsx`.
+- `**SectorCell` / `StatusChip` color map.** Pure mapping from the
+`decodeStatusCode` enum to a Tailwind class set. Lives next to the decoder
+so the wire-side enum and the view-side colors cannot drift.
 - **Column visibility module.** Pure state that owns the column registry,
-  defaults, hidden defaults, and the URL `cols=` round-trip. Exported as
-  `useColumnVisibility()` plus a static `COLUMN_REGISTRY`.
-- **`<TrackMap>`.** SVG schematic of the Nordschleife + GP-combination,
-  with a sector index → corner-segment mapping, taking a status array and
-  rendering a heat overlay.
-- **`<DriverStintTimeline>`.** Pure derive `(LapHistory[]) → Stint[]` plus
-  a horizontal-bar renderer.
-- **`<LeaderDeltaChart>`.** Pure derive `(Snapshot[], carNumber) → GapPoint[]`
-  plus a Recharts area chart.
+defaults, hidden defaults, and the URL `cols=` round-trip. Exported as
+`useColumnVisibility()` plus a static `COLUMN_REGISTRY`.
+- `**<TrackMap>`.** SVG schematic of the Nordschleife + GP-combination,
+with a sector index → corner-segment mapping, taking a status array and
+rendering a heat overlay.
+- `**<DriverStintTimeline>`.** Pure derive `(LapHistory[]) → Stint[]` plus
+a horizontal-bar renderer.
+- `**<LeaderDeltaChart>`.** Pure derive `(Snapshot[], carNumber) → GapPoint[]`
+plus a Recharts area chart.
 - **i18n module.** Tiny dictionary lookup `t(key, vars)` over a DE / EN map.
-  No third-party library; lookup only; missing-key fallback to the key itself.
+No third-party library; lookup only; missing-key fallback to the key itself.
 
 **New shallow modules** (composition-only):
 
-- **`<DashboardShell>`** — desktop/tablet shell composing
-  `<SessionHeader>`, `<PodiumRibbon>`, `<MainTabs>`, and the active tab body.
-- **`<MobileShell>`** — mobile shell composing `<SessionBar>`,
-  `<MiniPodium>`, page slot, fixed `<BottomTabBar>`.
-- **`<MainTabs>`** — Tabs primitive with conditional STQ trigger.
-- **`<SettingsDrawer>` (desktop/tablet) and `<SettingsView>` (mobile)** —
-  share the same form body (`<SettingsForm>`); only the chrome differs.
+- `**<DashboardShell>`** — desktop/tablet shell composing
+`<SessionHeader>`, `<PodiumRibbon>`, `<MainTabs>`, and the active tab body.
+- `**<MobileShell>**` — mobile shell composing `<SessionBar>`,
+`<MiniPodium>`, page slot, fixed `<BottomTabBar>`.
+- `**<MainTabs>**` — Tabs primitive with conditional STQ trigger.
+- `**<SettingsDrawer>` (desktop/tablet) and `<SettingsView>` (mobile)** —
+share the same form body (`<SettingsForm>`); only the chrome differs.
 - **Connection state UI** — `<EmptyState>`, `<ErrorState>`,
-  `<ReconnectingBanner>` reading the `connection` slice.
+`<ReconnectingBanner>` reading the `connection` slice.
 
 **Refactor / extend**:
 
 - `App.tsx` — switch on `useBreakpoint()`, render `<DashboardShell>` or
-  `<MobileShell>`, drop the current 3-column grid.
+`<MobileShell>`, drop the current 3-column grid.
 - `<Leaderboard>` — adopt the locked default columns; consume
-  `useColumnVisibility()` for visibility state; use `<DataNumeric>` for all
-  numerics; use the new `SectorCell`.
+`useColumnVisibility()` for visibility state; use `<DataNumeric>` for all
+numerics; use the new `SectorCell`.
 - `<CarDrilldownDialog>` — split into the seven content blocks listed in
-  the User Stories, each exported individually so the tablet and mobile
-  bottom sheets can re-compose them. New sub-components:
-  `<DrilldownHeader>`, `<KpiStrip>`, `<LapTimeChart>` (existing, extended
-  with PB + stint-avg refs), `<LapSectorMatrix>` (existing),
-  `<DriverStintTimeline>` (new), `<LeaderDeltaChart>` (new),
-  `<TelemetryPlaceholder>` (new). The dialog itself becomes a thin wrapper
-  that picks centered-modal vs bottom-sheet based on `useBreakpoint()`.
+the User Stories, each exported individually so the tablet and mobile
+bottom sheets can re-compose them. New sub-components:
+`<DrilldownHeader>`, `<KpiStrip>`, `<LapTimeChart>` (existing, extended
+with PB + stint-avg refs), `<LapSectorMatrix>` (existing),
+`<DriverStintTimeline>` (new), `<LeaderDeltaChart>` (new),
+`<TelemetryPlaceholder>` (new). The dialog itself becomes a thin wrapper
+that picks centered-modal vs bottom-sheet based on `useBreakpoint()`.
 - `<Podium>` — split into `<PodiumRibbon>` (slim, persistent, desktop +
-  tablet) and `<MiniPodium>` (horizontal scroll, mobile).
+tablet) and `<MiniPodium>` (horizontal scroll, mobile).
 - `<MessagesPanel>`, `<StatisticsPanel>`, `<TopQualifyingPanel>` — adopt
-  new tokens; otherwise minimally invasive.
+new tokens; otherwise minimally invasive.
 - `useUrlConfig` — extend with `cols`, `lang`, `tab` keys without breaking
-  existing ones.
+existing ones.
 
 ### Architecture and contracts
 
 - **Layers stay**: Wire (`lib/ws.ts`, `lib/api.ts`) → Decode (`lib/decode.ts`)
-  → Store (`store/useLiveStore.ts`) → View (`components/`). The redesign
-  touches only View + a token layer below it.
+→ Store (`store/useLiveStore.ts`) → View (`components/`). The redesign
+touches only View + a token layer below it.
 - **No new state libraries.** Zustand and Tanstack-Query stay. New state
-  (column visibility, language) lives in a Zustand slice rehydrated from URL
-  by an extended `useSyncFiltersFromUrl`.
+(column visibility, language) lives in a Zustand slice rehydrated from URL
+by an extended `useSyncFiltersFromUrl`.
 - **No CSS-in-JS.** Tokens via CSS custom properties; classes via Tailwind +
-  shadcn variants.
+shadcn variants.
 - **No backend.** Static SPA stays. i18n is bundled at build time.
 - **DE strings primary, EN secondary.** Strings ship in a single pair of dict
-  files; missing key falls back to the key string.
+files; missing key falls back to the key string.
 - **Stitch is reference, not source.** We do not paste Stitch HTML. We extract
-  the named colors and re-implement the layouts in JSX.
+the named colors and re-implement the layouts in JSX.
 
 ### Schema / API touch-points
 
 - **URL schema additions** (backwards-compatible):
-  `cols=<comma-separated-column-ids>`, `lang=<de|en>`, `tab=<leaderboard|stats|messages|trackmap|stq|settings>`.
+`cols=<comma-separated-column-ids>`, `lang=<de|en>`, `tab=<leaderboard|stats|messages|trackmap|stq|settings>`.
 - **Status enum** stays exactly as decoded by `decodeStatusCode`. No new
-  values. The `SectorCell` color map is the single consumer.
+values. The `SectorCell` color map is the single consumer.
 - **No changes** to PIDs, decode shapes, or the WS open-frame.
 
 ### Specific interactions
 
 - Tab switches do **not** unmount sibling tabs; the leaderboard keeps
-  receiving updates while Stats is foreground.
+receiving updates while Stats is foreground.
 - Drilldown is opened from any leaderboard row click; the breakpoint at
-  the moment of click decides modal-vs-sheet for that session (re-evaluated
-  on each open, not on resize).
+the moment of click decides modal-vs-sheet for that session (re-evaluated
+on each open, not on resize).
 - Reconnecting banner is non-blocking (top inset), not a toast.
 - `LTS_NOT_FOUND` replaces the dashboard body with a centered empty state and
-  a link back to the default event id.
+a link back to the default event id.
 - Bottom tab bar uses `position: sticky` plus
-  `padding-bottom: env(safe-area-inset-bottom)`.
+`padding-bottom: env(safe-area-inset-bottom)`.
 
 ## Testing Decisions
 
@@ -351,35 +351,35 @@ diffs and are explicitly opt-in.
 
 **Modules with new tests** (per the answers given to the grilling round):
 
-- **`<DataNumeric>`** — table tests across each `kind`
-  (`lapTime`, `sector`, `gap`, `delta`, `position`, `int`):
-  decimal alignment, lap-notation switchover at ±99.9 s, sign coloring for
-  `delta`, locale-independent decimal separator, `null`/`undefined`/`NaN`
-  handled as "—", monospace class always present.
-- **`useBreakpoint()`** — JSDOM `matchMedia` mock; assert the three return
-  values across the boundary widths (767, 768, 1023, 1024, 1280); SSR-safe
-  initial render returns `'desktop'`; updates on resize via the registered
-  listener.
-- **`SectorCell` / `StatusChip` color map** — table test from each
-  `decodeStatusCode` enum value to its expected token class. Add a guard test
-  that fails the suite if a new enum value is added without a color mapping.
+- `**<DataNumeric>`** — table tests across each `kind`
+(`lapTime`, `sector`, `gap`, `delta`, `position`, `int`):
+decimal alignment, lap-notation switchover at ±99.9 s, sign coloring for
+`delta`, locale-independent decimal separator, `null`/`undefined`/`NaN`
+handled as "—", monospace class always present.
+- `**useBreakpoint()**` — JSDOM `matchMedia` mock; assert the three return
+values across the boundary widths (767, 768, 1023, 1024, 1280); SSR-safe
+initial render returns `'desktop'`; updates on resize via the registered
+listener.
+- `**SectorCell` / `StatusChip` color map** — table test from each
+`decodeStatusCode` enum value to its expected token class. Add a guard test
+that fails the suite if a new enum value is added without a color mapping.
 - **Column visibility module** — pure tests:
-  default set matches PRD §3.4; hidden set matches PRD §3.4;
-  `serializeCols(state) → string` and `parseCols(string) → state` round-trip;
-  unknown column ids in URL are dropped silently; empty `cols=` resets to
-  default.
-- **`<DriverStintTimeline>` derive** — pure test: given a fixture
-  `LapHistory[]` with driver changes, returns the expected `Stint[]` (driver,
-  startLap, endLap, lapCount); handles 0-lap stints; handles unknown driver
-  ids.
-- **`<LeaderDeltaChart>` derive** — pure test: given a fixture snapshot
-  sequence and a target car number, returns the expected `GapPoint[]` (lap,
-  gapSeconds); handles laps where the leader car retired; clamps negative gaps
-  (i.e. when the target unlapped) to 0 with a flag.
+default set matches PRD §3.4; hidden set matches PRD §3.4;
+`serializeCols(state) → string` and `parseCols(string) → state` round-trip;
+unknown column ids in URL are dropped silently; empty `cols=` resets to
+default.
+- `**<DriverStintTimeline>` derive** — pure test: given a fixture
+`LapHistory[]` with driver changes, returns the expected `Stint[]` (driver,
+startLap, endLap, lapCount); handles 0-lap stints; handles unknown driver
+ids.
+- `**<LeaderDeltaChart>` derive** — pure test: given a fixture snapshot
+sequence and a target car number, returns the expected `GapPoint[]` (lap,
+gapSeconds); handles laps where the leader car retired; clamps negative gaps
+(i.e. when the target unlapped) to 0 with a flag.
 - **i18n** — pure tests: existing key returns DE/EN string; missing key
-  returns the key; variable interpolation `t('foo.bar', {n: 3})`; switching
-  language re-renders consumers (rendered with a tiny `<I18nProvider>`
-  context).
+returns the key; variable interpolation `t('foo.bar', {n: 3})`; switching
+language re-renders consumers (rendered with a tiny `<I18nProvider>`
+context).
 
 **Existing PRD tests** (`lib/ws.ts`, `lib/decode.ts`, `hooks/useUrlConfig.ts`,
 `store/useLiveStore.ts`) are kept and verified green; the `useUrlConfig`
@@ -394,14 +394,14 @@ fixture frames):
 **Prior art / inspiration**:
 
 - The existing `decode.ts` test style (table tests over enum) is the model
-  for `<DataNumeric>`, `SectorCell`, and i18n.
+for `<DataNumeric>`, `SectorCell`, and i18n.
 - Vitest fixture-driven tests (existing pattern) are the model for the
-  derive functions in `<DriverStintTimeline>` and `<LeaderDeltaChart>`.
+derive functions in `<DriverStintTimeline>` and `<LeaderDeltaChart>`.
 
 ## Out of Scope
 
 - Telemetry data integration (the placeholder block is rendered, but the
-  data path is not wired).
+data path is not wired).
 - Audio commentary, push notifications, or any sound.
 - Native mobile app — the mobile shell is responsive web only.
 - Server-side rendering, SEO, social card previews.
@@ -416,18 +416,18 @@ fixture frames):
 ## Further Notes
 
 - The "complete concept" deliverable in Stitch is 17 screens (9 edits + 8
-  new) inside project `projects/13661023061589856813`. The design system is
-  already locked there; a developer should treat that project as the
-  authoritative reference for tokens and screen layouts.
+new) inside project `projects/13661023061589856813`. The design system is
+already locked there; a developer should treat that project as the
+authoritative reference for tokens and screen layouts.
 - The full delivery schedule (vertical phasing: foundations → desktop →
-  tablet → mobile → tests + polish) lives in `docs/IMPLEMENTATION_PLAN.md`
-  and is intentionally not duplicated here.
+tablet → mobile → tests + polish) lives in `docs/IMPLEMENTATION_PLAN.md`
+and is intentionally not duplicated here.
 - The Telemetry placeholder is a deliberate forward-compat hook; do not
-  delete it even though it ships empty. Removing it is a breaking layout
-  change.
+delete it even though it ships empty. Removing it is a breaking layout
+change.
 - Sector count is dynamic (Nordschleife uses up to 9, F1 tracks use 3); the
-  leaderboard and sector matrix must render only the populated `S1..Sn`
-  cells.
+leaderboard and sector matrix must render only the populated `S1..Sn`
+cells.
 - `eventPid` remains an array (per PRD note) and is unaffected by this
-  redesign.
+redesign.
 - `LTS_TIMESYNC` ordering invariant from the original PRD is unchanged.
