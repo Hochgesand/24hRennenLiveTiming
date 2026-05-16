@@ -16,6 +16,13 @@ export type SectorGeometry = {
   sectors: SectorSpan[][]
   /** Marker positions (end of each sector) in viewBox coords. */
   markers: { x: number; y: number }[]
+  /**
+   * O(1) replacement for SVGPathElement.getPointAtLength().
+   * Built from the pre-sampled lookup table in resolveSectorGeometry — ~0.5 SVG-unit
+   * resolution with linear interpolation, avoiding the expensive browser geometry query
+   * in the 60 fps animation loop.
+   */
+  pointAtLength: (len: number) => { x: number; y: number }
 }
 
 function parseNum(v: WireScalar | undefined): number | null {
@@ -137,15 +144,24 @@ export function distanceToPathLength(
 }
 
 function landmarkBoundaryLengths(path: SVGPathElement, totalLength: number) {
-  // Walk the path once, sampling at ~0.5-unit resolution, and keep the best
-  // distance for each fixed SVG landmark in a single pass.
+  // Walk the path once at ~0.5-unit resolution.
+  // Simultaneously: find sector boundary landmarks AND build a lookup table
+  // for O(1) pointAtLength queries in the animation loop.
   const step = 0.5
+  const capacity = Math.ceil(totalLength / step) + 2
+  const xs = new Float32Array(capacity)
+  const ys = new Float32Array(capacity)
+
   const bestDist = SECTOR_END_POINTS.map(() => Infinity)
   const bestLen = SECTOR_END_POINTS.map(() => 0)
   const markers = SECTOR_END_POINTS.map(() => ({ x: 0, y: 0 }))
 
+  let count = 0
   for (let d = 0; d < totalLength; d += step) {
     const p = path.getPointAtLength(d)
+    xs[count] = p.x
+    ys[count] = p.y
+    count++
     for (let i = 0; i < SECTOR_END_POINTS.length; i++) {
       const dx = p.x - SECTOR_END_POINTS[i].x
       const dy = p.y - SECTOR_END_POINTS[i].y
@@ -158,11 +174,28 @@ function landmarkBoundaryLengths(path: SVGPathElement, totalLength: number) {
     }
   }
 
+  // Ensure the path end is captured.
   const finish = path.getPointAtLength(totalLength)
+  xs[count] = finish.x
+  ys[count] = finish.y
+  count++
+
   bestLen[bestLen.length - 1] = totalLength
   markers[markers.length - 1] = { x: finish.x, y: finish.y }
 
-  return { boundaryLengths: bestLen, markers }
+  // Samples are evenly spaced at `step` — direct index + lerp, no binary search.
+  const lastIdx = count - 1
+  const pointAtLength = (len: number): { x: number; y: number } => {
+    if (len <= 0) return { x: xs[0], y: ys[0] }
+    if (len >= totalLength) return { x: xs[lastIdx], y: ys[lastIdx] }
+    const raw = len / step
+    const lo = Math.floor(raw)
+    const hi = lo + 1 < lastIdx ? lo + 1 : lastIdx
+    const t = raw - lo
+    return { x: xs[lo] + (xs[hi] - xs[lo]) * t, y: ys[lo] + (ys[hi] - ys[lo]) * t }
+  }
+
+  return { boundaryLengths: bestLen, markers, pointAtLength }
 }
 
 export function resolveSectorGeometry(
@@ -177,10 +210,11 @@ export function resolveSectorGeometry(
       totalLength: 0,
       sectors: SECTOR_END_POINTS.map(() => []),
       markers: SECTOR_END_POINTS.map(() => ({ x: 0, y: 0 })),
+      pointAtLength: () => ({ x: 0, y: 0 }),
     }
   }
 
-  const { boundaryLengths, markers } = landmarkBoundaryLengths(path, L)
+  const { boundaryLengths, markers, pointAtLength } = landmarkBoundaryLengths(path, L)
 
   const sectors: SectorSpan[][] = []
   for (let i = 0; i < boundaryLengths.length; i++) {
@@ -196,5 +230,5 @@ export function resolveSectorGeometry(
     }
   }
 
-  return { totalLength: L, sectors, markers }
+  return { totalLength: L, sectors, markers, pointAtLength }
 }

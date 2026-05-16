@@ -27,6 +27,7 @@ function geometryFromBoundaries(boundaries: number[]): SectorGeometry {
         { startLen: 0, endLen: curr },
       ]
     }),
+    pointAtLength: () => ({ x: 0, y: 0 }),
   }
 }
 

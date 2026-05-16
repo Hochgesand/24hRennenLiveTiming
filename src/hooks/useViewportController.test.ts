@@ -1,9 +1,6 @@
 import { renderHook, act } from "@testing-library/react"
-import { describe, it, expect, beforeEach } from "vitest"
+import { describe, it, expect } from "vitest"
 import { useViewportController, MIN_ZOOM, MAX_ZOOM, ZOOM_STEP } from "./useViewportController"
-
-// Shared positionsRef with no followed car by default.
-const emptyPositions = { current: new Map<string, { x: number; y: number }>() }
 
 // Fake events helpers — only the fields the handlers actually read.
 function wheelEvt(deltaY: number, clientX = 500, clientY = 300) {

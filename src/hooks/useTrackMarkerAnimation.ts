@@ -103,8 +103,8 @@ export function useTrackMarkerAnimation({
 
     const tick = () => {
       const drivers = computeTrackDrivers({
-        session: sessionMeta,
-        trackState,
+        session: sessionMeta ?? null,
+        trackState: trackState as import("@/lib/types").WireScalar | undefined,
         remoteTimeDiffMs,
         trackPathLength: geometry.totalLength,
         history,
@@ -120,7 +120,7 @@ export function useTrackMarkerAnimation({
         driverMap.set(d.startingNumber, d)
         if (!d.visible) continue
         const len = distanceToPathLength(d.distanceM, timingSectors, geometry)
-        const p = pathElement.getPointAtLength(len)
+        const p = geometry.pointAtLength(len)
         positions.set(d.startingNumber, { x: p.x, y: p.y })
         visibleNow.push(d.startingNumber)
 
