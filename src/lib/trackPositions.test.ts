@@ -508,12 +508,20 @@ describe("computeTrackDrivers — staleness guard", () => {
   })
 })
 
+const stubTiming = {
+  anchorDistanceM: 0,
+  anchorTimeMs: 0,
+  predictedVelocityMps: 0,
+  maxProjectedDistanceM: 0,
+  currentDistanceM: 0,
+}
+
 describe("separateDriverDistances", () => {
   it("pushes overlapping cars apart by at least 70m", () => {
-    const rows: Parameters<typeof separateDriverDistances>[0] = [
-      { DIST: 100, ONTRACK: true },
-      { DIST: 120, ONTRACK: true },
-    ]
+    const rows = [
+      { DIST: 100, ONTRACK: true, timing: stubTiming },
+      { DIST: 120, ONTRACK: true, timing: stubTiming },
+    ] as Parameters<typeof separateDriverDistances>[0]
     separateDriverDistances(rows, 1000)
     expect(Math.abs(rows[0].DIST - rows[1].DIST)).toBeGreaterThanOrEqual(70)
   })

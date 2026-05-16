@@ -225,7 +225,6 @@ export function TrackMapPanel() {
           continue
         }
 
-        const anchorLen = distanceToPathLength(driver.anchorDistanceM, timingSectors, geometry)
         const predictedVel =
           mPerUnit > 0 && driver.predictedVelocityMps > 0
             ? driver.predictedVelocityMps / mPerUnit
