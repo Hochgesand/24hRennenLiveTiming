@@ -80,6 +80,10 @@ export const STRINGS: Record<
     "trackmap.zoomReset": "Zoom zurücksetzen",
     "trackmap.attribution":
       "Streckenlayout: „Circuit Nürburgring-2002-24h.svg“ von Pitlane02, Wikimedia Commons, CC BY-SA 3.0.",
+    "trackmap.tooltip.gapPrefix": "+",
+    "trackmap.tooltip.lapPrefix": "Runde",
+    "trackmap.follow.label": "Folge",
+    "trackmap.follow.releaseAria": "Folgen beenden",
     "shell.liveState.connected": "LIVE_TELEMETRY_STREAM_CONNECTED",
     "shell.liveState.connecting": "LIVE_TELEMETRY_STREAM_CONNECTING…",
     "shell.liveState.reconnecting": "LIVE_TELEMETRY_STREAM_RECONNECTING…",
@@ -233,6 +237,10 @@ export const STRINGS: Record<
     "trackmap.zoomReset": "Reset zoom",
     "trackmap.attribution":
       "Track layout: \"Circuit Nürburgring-2002-24h.svg\" by Pitlane02, Wikimedia Commons, CC BY-SA 3.0.",
+    "trackmap.tooltip.gapPrefix": "+",
+    "trackmap.tooltip.lapPrefix": "Lap",
+    "trackmap.follow.label": "Following",
+    "trackmap.follow.releaseAria": "Stop following",
     "shell.liveState.connected": "LIVE_TELEMETRY_STREAM_CONNECTED",
     "shell.liveState.connecting": "LIVE_TELEMETRY_STREAM_CONNECTING…",
     "shell.liveState.reconnecting": "LIVE_TELEMETRY_STREAM_RECONNECTING…",

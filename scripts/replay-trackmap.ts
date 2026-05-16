@@ -1,11 +1,11 @@
 /**
  * Offline track-map jump histogram.
  *
- * Loads the fixture produced by the Playwright capture script
- * (`src/lib/__fixtures__/trackmap.event50.json`) and replays every
- * PID 0 sample through `computeTrackDrivers` — using each sample's own
- * `at` timestamp as `Date.now()` so elapsed-time math matches what the UI
- * sees at capture time.  Prints the jump histogram and per-bucket details.
+ * Loads the fixture captured by the Playwright script
+ * (`src/lib/__fixtures__/trackmap.event50.json`) and replays every PID 0
+ * sample through the rewritten `computeTrackDrivers`, using each sample's
+ * own `at` timestamp as `Date.now()` so elapsed-time math matches what the
+ * UI sees at capture time. Prints the jump histogram and per-bucket details.
  *
  * Usage:
  *   npm run replay:trackmap
@@ -18,11 +18,7 @@ import { fileURLToPath } from "node:url"
 import path from "node:path"
 
 import type { Pid0Frame, RawResultRow } from "../src/lib/types.js"
-import { computeTrackDrivers, type TrackDriverHistory } from "../src/lib/trackPositions.js"
-
-// ---------------------------------------------------------------------------
-// Load fixture
-// ---------------------------------------------------------------------------
+import { computeTrackDrivers, type TrackTimingHistory } from "../src/lib/trackTiming.js"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const defaultFixture = path.resolve(
@@ -56,10 +52,6 @@ console.log(`\nReplay: ${fixturePath}`)
 console.log(`Track length: ${trackLength} m  SVG path: ${pathLength.toFixed(1)} units`)
 console.log(`Samples: ${samples.length}  Visible markers approx: ${samples[0]?.rows.length ?? 0}`)
 
-// ---------------------------------------------------------------------------
-// Replay
-// ---------------------------------------------------------------------------
-
 const BUCKETS = [
   { label: "> 5  units", min: 5 },
   { label: ">10  units", min: 10 },
@@ -80,7 +72,7 @@ const largestJumps: Array<{
 }> = []
 
 const prevState = new Map<string, { len: number; at: number }>()
-const history: TrackDriverHistory = new Map()
+const history: TrackTimingHistory = new Map()
 
 let nowMock = 0
 const _origNow = Date.now.bind(Date)
@@ -115,7 +107,8 @@ for (const sample of samples) {
 
     if (prev) {
       const dt = (at - prev.at) / 1000
-      const delta = Math.abs(svgLen - prev.len)
+      let delta = Math.abs(svgLen - prev.len)
+      if (delta > pathLength / 2) delta = pathLength - delta // seam wrap
 
       if (dt <= 2) {
         for (let i = 0; i < BUCKETS.length; i++) {
@@ -139,10 +132,6 @@ for (const sample of samples) {
 }
 
 Date.now = _origNow
-
-// ---------------------------------------------------------------------------
-// Report
-// ---------------------------------------------------------------------------
 
 console.log("\n── Jump histogram (per-car, between consecutive ≤2 s samples) ──")
 for (let i = 0; i < BUCKETS.length; i++) {
