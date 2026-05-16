@@ -1,9 +1,19 @@
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 
 import type { LapSectorStatus } from "@/domain"
 import { decodeLapStatus } from "@/domain"
 import type { RawResultRow } from "@/domain"
 import { useI18n } from "@/i18n/I18nContext"
+import {
+  distanceToPathLength,
+  parseTimingSectorLengths,
+  resolveSectorGeometry,
+  resolveTimingSectorLengths,
+  type SectorGeometry,
+  type SectorSpan,
+  type TimingSectorLengths,
+} from "@/lib/trackGeometry"
+import { computeTrackDrivers, type TrackDriverMarker } from "@/lib/trackPositions"
 import {
   CHECKERED_TILES,
   DIRECTION_ARROW_DS,
@@ -52,73 +62,6 @@ function sectorStatusesForRow(row: RawResultRow | undefined): LapSectorStatus[] 
   })
 }
 
-/**
- * Nine sector arcs, each resolved as one or more `{ startLen, endLen }` spans
- * along the main track path. Sectors wrap the path start when needed (since
- * the SVG's `M ...` is not exactly at the Start/Ziel line).
- */
-type SectorSpan = { startLen: number; endLen: number }
-type SectorGeometry = {
-  /** Total path length, in SVG user units. */
-  totalLength: number
-  /** One entry per sector; may contain two spans when the sector wraps. */
-  sectors: SectorSpan[][]
-  /** Marker positions (end of each sector) in viewBox coords. */
-  markers: { x: number; y: number }[]
-}
-
-function resolveSectorGeometry(path: SVGPathElement): SectorGeometry {
-  const L = path.getTotalLength()
-  if (!Number.isFinite(L) || L <= 0) {
-    return {
-      totalLength: 0,
-      sectors: SECTOR_END_POINTS.map(() => []),
-      markers: SECTOR_END_POINTS.map(() => ({ x: 0, y: 0 })),
-    }
-  }
-
-  // Walk the path once, sampling at ~0.5-unit resolution, and keep the best
-  // distance for each sector landmark in a single pass.
-  const STEP = 0.5
-  const bestDist = SECTOR_END_POINTS.map(() => Infinity)
-  const bestLen = SECTOR_END_POINTS.map(() => 0)
-  const markers = SECTOR_END_POINTS.map(() => ({ x: 0, y: 0 }))
-
-  for (let d = 0; d < L; d += STEP) {
-    const p = path.getPointAtLength(d)
-    for (let i = 0; i < SECTOR_END_POINTS.length; i++) {
-      const dx = p.x - SECTOR_END_POINTS[i].x
-      const dy = p.y - SECTOR_END_POINTS[i].y
-      const sq = dx * dx + dy * dy
-      if (sq < bestDist[i]) {
-        bestDist[i] = sq
-        bestLen[i] = d
-        markers[i] = { x: p.x, y: p.y }
-      }
-    }
-  }
-
-  // The landmark array is ordered by driving direction (S1 end → S9 end).
-  // Sector i starts at the previous landmark and ends at the current one,
-  // with the first sector starting at the last landmark (Start/Ziel).
-  const sectors: SectorSpan[][] = []
-  for (let i = 0; i < bestLen.length; i++) {
-    const prev = i === 0 ? bestLen[bestLen.length - 1] : bestLen[i - 1]
-    const curr = bestLen[i]
-    if (prev <= curr) {
-      sectors.push([{ startLen: prev, endLen: curr }])
-    } else {
-      // Wrap around the path start: draw [prev, L] and [0, curr] as two spans.
-      sectors.push([
-        { startLen: prev, endLen: L },
-        { startLen: 0, endLen: curr },
-      ])
-    }
-  }
-
-  return { totalLength: L, sectors, markers }
-}
-
 /** Build a `stroke-dasharray` that renders only `[startLen, endLen]`. */
 function spanDashArray(span: SectorSpan, totalLength: number): string {
   const visible = Math.max(0, span.endLen - span.startLen)
@@ -131,24 +74,116 @@ const MAX_ZOOM = 4
 const ZOOM_STEP = 0.3
 const BASE_WIDTH_PX = 1100
 
+function driverMarkerLabel(d: TrackDriverMarker): string {
+  const parts = [`#${d.startingNumber}`]
+  if (d.name) {
+    parts.push(d.name)
+  }
+  if (d.position) {
+    parts.push(`P${d.position}`)
+  }
+  if (d.className) {
+    parts.push(d.className)
+  }
+  return parts.join(" · ")
+}
+
+function createTimingSectorResolver() {
+  let cached: TimingSectorLengths | null = null
+  return (session: Parameters<typeof parseTimingSectorLengths>[0]) => {
+    const parsed = parseTimingSectorLengths(session)
+    if (parsed) {
+      cached = parsed
+      return parsed
+    }
+    return resolveTimingSectorLengths(session, cached)
+  }
+}
+
+export function TrackCarMarkers({
+  drivers,
+  pathLengthForDriver,
+  getPointAtLength,
+}: {
+  drivers: TrackDriverMarker[]
+  pathLengthForDriver: (driver: TrackDriverMarker) => number
+  getPointAtLength: (len: number) => { x: number; y: number }
+}) {
+  const visible = drivers.filter((d) => d.visible)
+  return (
+    <g className="track-car-markers" aria-label="Cars on track">
+      {[...visible].reverse().map((d) => {
+        const len = pathLengthForDriver(d)
+        const { x, y } = getPointAtLength(len)
+        const label = driverMarkerLabel(d)
+        return (
+          <g key={d.startingNumber} role="img" aria-label={label}>
+            <title>{label}</title>
+            <circle
+              cx={x}
+              cy={y}
+              r={7}
+              fill="#fff"
+              stroke="#000"
+              strokeWidth={1.2}
+            />
+            <text
+              x={x}
+              y={y + 2.5}
+              textAnchor="middle"
+              className="fill-black font-mono font-bold"
+              fontSize={5.5}
+              aria-hidden="true"
+            >
+              {d.startingNumber}
+            </text>
+          </g>
+        )
+      })}
+    </g>
+  )
+}
+
 export function TrackMapPanel() {
   const { t } = useI18n()
   const sessionMeta = useLiveStore((s) => s.sessionMeta)
+  const track = useLiveStore((s) => s.track)
+  const remoteTimeDiffMs = useLiveStore((s) => s.connection.remoteTimeDiffMs)
   const firstRow = sessionMeta?.RESULT?.[0]
 
   const [zoom, setZoom] = useState(1)
-  const [geometry, setGeometry] = useState<SectorGeometry | null>(null)
+  const [, setAnimTick] = useState(0)
+  const [pathElement, setPathElement] = useState<SVGPathElement | null>(null)
+  const [resolveTimingSectors] = useState(() => createTimingSectorResolver())
 
   const statuses = useMemo(() => sectorStatusesForRow(firstRow), [firstRow])
-  const pathRef = useRef<SVGPathElement | null>(null)
-
-  // Resolve the sector cuts once the main path has mounted. Running this in a
-  // simple effect (instead of useLayoutEffect) keeps SSR / jsdom-test paths
-  // happy; the initial render shows the raw track until geometry arrives.
-  useEffect(() => {
-    if (!pathRef.current) return
-    setGeometry(resolveSectorGeometry(pathRef.current))
+  const geometry = useMemo<SectorGeometry | null>(
+    () => (pathElement ? resolveSectorGeometry(pathElement, sessionMeta) : null),
+    [pathElement, sessionMeta],
+  )
+  const timingSectors = useMemo(() => {
+    return resolveTimingSectors(sessionMeta)
+  }, [resolveTimingSectors, sessionMeta])
+  const setMainPathRef = useCallback((node: SVGPathElement | null) => {
+    setPathElement(node)
   }, [])
+
+  useEffect(() => {
+    let frame = 0
+    const loop = () => {
+      setAnimTick((n) => (n + 1) % 1_000_000)
+      frame = requestAnimationFrame(loop)
+    }
+    frame = requestAnimationFrame(loop)
+    return () => cancelAnimationFrame(frame)
+  }, [])
+
+  const drivers = computeTrackDrivers({
+    session: sessionMeta,
+    trackState: track?.TRACKSTATE ?? sessionMeta?.TRACKSTATE,
+    remoteTimeDiffMs,
+    trackPathLength: geometry?.totalLength ?? 0,
+  })
 
   const canZoomIn = zoom < MAX_ZOOM - 1e-6
   const canZoomOut = zoom > MIN_ZOOM + 1e-6
@@ -238,7 +273,7 @@ export function TrackMapPanel() {
 
           {/* Main circuit — muted base so sectors overlay cleanly on top. */}
           <path
-            ref={pathRef}
+            ref={setMainPathRef}
             d={TRACK_MAIN_PATH_D}
             fill="none"
             stroke="rgb(255 255 255 / 14%)"
@@ -345,6 +380,18 @@ export function TrackMapPanel() {
               </text>
             ))}
           </g>
+
+          {geometry && pathElement ? (
+            <TrackCarMarkers
+              drivers={drivers}
+              pathLengthForDriver={(driver) =>
+                timingSectors
+                  ? distanceToPathLength(driver.distanceM, timingSectors, geometry)
+                  : driver.pathFraction * geometry.totalLength
+              }
+              getPointAtLength={(len) => pathElement.getPointAtLength(len)}
+            />
+          ) : null}
         </svg>
       </div>
 

@@ -51,6 +51,12 @@ export interface RawResultRow {
   LLTS?: WireScalar
   /** Fastest lap — alternate wire key. */
   FLTS?: WireScalar
+  /** Expected time at next intermediate (ms, server clock). */
+  ETA?: WireScalar
+  /** Time at last intermediate (ms, server clock). */
+  LASTIMTIME?: WireScalar
+  /** Last intermediate index (WIGE timing codes 1–9, pit/off-track 8+). */
+  LASTINTERMEDIATENUMBER?: WireScalar
   [key: string]: WireScalar | undefined
 }
 
@@ -63,6 +69,23 @@ export interface Pid0Frame {
   HEAT?: string
   HEATTYPE?: string
   TRACKNAME?: string
+  /** Track length in metres (race-track distance calc). */
+  TRACKLENGTH?: WireScalar
+  /** Number of intermediate timing points on circuit. */
+  NROFINTERMEDIATETIMES?: WireScalar
+  /** Sector / straight lengths in metres (`S1L`…`S9L`, depending on protocol/config). */
+  S1L?: WireScalar
+  S2L?: WireScalar
+  S3L?: WireScalar
+  S4L?: WireScalar
+  S5L?: WireScalar
+  S6L?: WireScalar
+  S7L?: WireScalar
+  S8L?: WireScalar
+  S9L?: WireScalar
+  APL?: WireScalar
+  /** Live track state on PID 0 payload (also on PID 4). */
+  TRACKSTATE?: WireScalar
   STQ?: string | number
   BEST?: WireScalar
   TOD?: string | number
