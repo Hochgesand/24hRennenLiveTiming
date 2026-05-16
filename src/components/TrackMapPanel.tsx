@@ -14,6 +14,12 @@ import {
   type TimingSectorLengths,
 } from "@/lib/trackGeometry"
 import {
+  advanceMarkerState,
+  DEFAULT_CATCH_UP_SEC,
+  projectTargetDistanceM,
+  wrapPathLength,
+} from "@/lib/markerMotion"
+import {
   computeTrackDrivers,
   type TrackDriverHistory,
   type TrackDriverMarker,
@@ -77,9 +83,6 @@ const MIN_ZOOM = 0.6
 const MAX_ZOOM = 4
 const ZOOM_STEP = 0.3
 const BASE_WIDTH_PX = 1100
-
-/** EMA time constant for marker smoothing (seconds). */
-const EMA_TAU = 0.25
 
 function driverMarkerLabel(d: TrackDriverMarker): string {
   const parts = [`#${d.startingNumber}`]
@@ -165,9 +168,11 @@ export function TrackMapPanel() {
 
   /** Persistent staleness cache — prevents stale PID 0 rows from pulling markers back. */
   const historyRef = useRef<TrackDriverHistory>(new Map())
-  /** Per-car EMA-smoothed SVG path lengths (updated each animation frame). */
-  const displayedLenRef = useRef<Map<string, number>>(new Map())
-  /** Timestamp of the previous animation frame (ms) for EMA dt computation. */
+  /** Per-car constant-velocity motion state (updated each animation frame). */
+  const markerStateRef = useRef<
+    Map<string, { displayedLen: number; heldVelocity: number; anchorTimeMs: number }>
+  >(new Map())
+  /** Timestamp of the previous animation frame (ms) for integrator dt. */
   const lastFrameTsRef = useRef<number | undefined>(undefined)
 
   const statuses = useMemo(() => sectorStatusesForRow(firstRow), [firstRow])
@@ -200,37 +205,50 @@ export function TrackMapPanel() {
     history: historyRef.current,
   })
 
-  // --- Per-frame EMA smoothing ---
-  // Runs every render (driven by the rAF animTick), mutating displayedLenRef
-  // so TrackCarMarkers always reads a smoothly interpolated path length.
+  // --- Per-frame constant-velocity integrator (rAF-driven) ---
   {
-    const now = Date.now()
+    const serverNowMs = Date.now() + remoteTimeDiffMs
     const dtSec =
       lastFrameTsRef.current !== undefined
-        ? Math.max(0, (now - lastFrameTsRef.current) / 1000)
+        ? Math.max(0, (Date.now() - lastFrameTsRef.current) / 1000)
         : 0
-    lastFrameTsRef.current = now
+    lastFrameTsRef.current = Date.now()
 
-    if (geometry && timingSectors) {
+    if (geometry && timingSectors && geometry.totalLength > 0) {
       const totalLength = geometry.totalLength
-      const alpha = dtSec > 0 ? 1 - Math.exp(-dtSec / EMA_TAU) : 1
+      const trackLengthM = drivers[0]?.trackLengthM ?? timingSectors.trackLengthM
+      const mPerUnit = trackLengthM > 0 ? trackLengthM / totalLength : 0
+
       for (const driver of drivers) {
         if (!driver.visible) {
-          displayedLenRef.current.delete(driver.startingNumber)
+          markerStateRef.current.delete(driver.startingNumber)
           continue
         }
-        const rawLen = distanceToPathLength(driver.distanceM, timingSectors, geometry)
-        const prev = displayedLenRef.current.get(driver.startingNumber)
-        if (prev === undefined) {
-          displayedLenRef.current.set(driver.startingNumber, rawLen)
-        } else {
-          // Snap across the start/finish seam to avoid tweening the wrong way around.
-          const displayed =
-            Math.abs(rawLen - prev) > totalLength / 2
-              ? rawLen
-              : prev + (rawLen - prev) * alpha
-          displayedLenRef.current.set(driver.startingNumber, displayed)
-        }
+
+        const anchorLen = distanceToPathLength(driver.anchorDistanceM, timingSectors, geometry)
+        const predictedVel =
+          mPerUnit > 0 && driver.predictedVelocityMps > 0
+            ? driver.predictedVelocityMps / mPerUnit
+            : 0
+        const elapsedSec = Math.max(0, (serverNowMs - driver.anchorTimeMs) / 1000)
+        const targetM = projectTargetDistanceM(
+          driver.anchorDistanceM,
+          driver.predictedVelocityMps,
+          elapsedSec,
+          driver.maxProjectedDistanceM,
+        )
+        const targetLen = distanceToPathLength(targetM, timingSectors, geometry)
+
+        const prev = markerStateRef.current.get(driver.startingNumber)
+        const next = advanceMarkerState(prev, {
+          targetLen,
+          predictedVel,
+          anchorTimeMs: driver.anchorTimeMs,
+          dtSec,
+          totalLength,
+          catchUpSec: DEFAULT_CATCH_UP_SEC,
+        })
+        markerStateRef.current.set(driver.startingNumber, next)
       }
     }
   }
@@ -434,12 +452,15 @@ export function TrackMapPanel() {
           {geometry && pathElement ? (
             <TrackCarMarkers
               drivers={drivers}
-              pathLengthForDriver={(driver) =>
-                displayedLenRef.current.get(driver.startingNumber) ??
-                (timingSectors
-                  ? distanceToPathLength(driver.distanceM, timingSectors, geometry)
-                  : driver.pathFraction * geometry.totalLength)
-              }
+              pathLengthForDriver={(driver) => {
+                const state = markerStateRef.current.get(driver.startingNumber)
+                if (state) {
+                  return wrapPathLength(state.displayedLen, geometry.totalLength)
+                }
+                return timingSectors
+                  ? distanceToPathLength(driver.anchorDistanceM, timingSectors, geometry)
+                  : driver.pathFraction * geometry.totalLength
+              }}
               getPointAtLength={(len) => pathElement.getPointAtLength(len)}
             />
           ) : null}

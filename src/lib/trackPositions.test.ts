@@ -1,8 +1,9 @@
-import { describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 
 import type { Pid0Frame, RawResultRow } from "./types"
 import {
   calculateRowDistanceM,
+  computeRowTimingProjection,
   computeTrackDrivers,
   separateDriverDistances,
   type TrackDriverHistory,
@@ -61,16 +62,16 @@ describe("calculateRowDistanceM — ETA as predicted finish-line time", () => {
     expect(dist).toBe(250)
   })
 
-  it("clamps to nextBound when elapsed exceeds sector time budget", () => {
+  it("extrapolates past nextBound when elapsed exceeds sector time budget", () => {
     const session = baseSession()
-    // elapsedSec = 5 s >> currentSectorSec ≈ 1.25 s → progress = 1.
+    // currentSectorSec ≈ 1.25 s, velocity ≈ 80 m/s; at 5 s → projected ≈ 600, cap = 400.
     const r = row({
       LASTINTERMEDIATENUMBER: 2,
       LASTIMTIME: 0,
       ETA: 10_000,
     })
     const dist = calculateRowDistanceM(session, r, 5_000)
-    expect(dist).toBe(300) // nextBound = S1+S2+S3 = 300
+    expect(dist).toBe(400) // nextBound=300 + currentSectorM=100
   })
 
   it("falls back to the last known intermediate when segment duration is zero", () => {
@@ -211,7 +212,7 @@ describe("calculateRowDistanceM — ETA as predicted finish-line time", () => {
     ).toBe(2800)
   })
 
-  it("clamps to nextBound when elapsedSec exceeds proportional sector budget", () => {
+  it("extrapolates past nextBound when elapsedSec exceeds proportional sector budget", () => {
     const session = baseSession({
       TRACKLENGTH: 4500,
       NROFINTERMEDIATETIMES: 9,
@@ -226,15 +227,115 @@ describe("calculateRowDistanceM — ETA as predicted finish-line time", () => {
       S9L: 900,
     })
 
-    // IM=6: lastDist=2100, nextBound=2800, remainingM=4500−2100=2400.
-    // currentSectorSec = 10*(700/2400) ≈ 2.917 s.
-    // At 5 s: progress=1 → clamped to nextBound=2800.
+    // IM=6: lastDist=2100, nextBound=2800, currentSectorM=700.
+    // currentSectorSec ≈ 2.917 s; at 5 s projected ≈ 3300 (past nextBound, under cap).
     const dist = calculateRowDistanceM(
       session,
       row({ LASTINTERMEDIATENUMBER: 6, LASTIMTIME: 0, ETA: 10_000 }),
       5_000,
     )
-    expect(dist).toBe(2800)
+    expect(dist).toBe(3300)
+  })
+
+  it("extrapolates past predicted boundary at constant velocity", () => {
+    const session = baseSession()
+    const r = row({
+      LASTINTERMEDIATENUMBER: 2,
+      LASTIMTIME: 0,
+      ETA: 10_000,
+    })
+    // currentSectorSec = 1.25 s, velocity = 80 m/s; at 2 s → 360 m (past nextBound=300).
+    const dist = calculateRowDistanceM(session, r, 2_000)
+    expect(dist).toBe(360)
+  })
+
+  it("caps extrapolation at one sector beyond predicted boundary", () => {
+    const session = baseSession()
+    const r = row({
+      LASTINTERMEDIATENUMBER: 2,
+      LASTIMTIME: 0,
+      ETA: 10_000,
+    })
+    // Very large elapsed → hits lookaheadCap = nextBound + currentSectorM = 400.
+    const dist = calculateRowDistanceM(session, r, 60_000)
+    expect(dist).toBe(400)
+  })
+
+  it("no regression on fresh update after extrapolation", () => {
+    const session = baseSession()
+    const extrapolated = calculateRowDistanceM(
+      session,
+      row({
+        LASTINTERMEDIATENUMBER: 2,
+        LASTIMTIME: 0,
+        ETA: 10_000,
+      }),
+      2_000,
+    )
+    expect(extrapolated).toBeGreaterThan(300) // past nextBound
+
+    // New intermediate at IM=3: lastDist=300, elapsed=0 → snaps to anchor.
+    const fresh = calculateRowDistanceM(
+      session,
+      row({
+        LASTINTERMEDIATENUMBER: 3,
+        LASTIMTIME: 2_000,
+        ETA: 12_000,
+      }),
+      2_000,
+    )
+    expect(fresh).toBe(300)
+  })
+})
+
+describe("computeRowTimingProjection — anchor fields", () => {
+  it("exposes anchor, server time, and predicted velocity for the current sector", () => {
+    const session = baseSession()
+    const r = row({
+      LASTINTERMEDIATENUMBER: 2,
+      LASTIMTIME: 1_000,
+      ETA: 11_000,
+    })
+    const projection = computeRowTimingProjection(session, r, 1_000)
+    expect(projection.anchorDistanceM).toBe(200)
+    expect(projection.anchorTimeMs).toBe(1_000)
+    // currentSectorSec = 10 * (100/800) = 1.25 s → velocity = 80 m/s
+    expect(projection.predictedVelocityMps).toBeCloseTo(80, 5)
+    expect(projection.maxProjectedDistanceM).toBe(400) // nextBound=300 + sector=100
+    expect(projection.currentDistanceM).toBe(200) // elapsed=0
+  })
+})
+
+describe("computeTrackDrivers — marker timing fields", () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it("plumbs anchor fields and track length onto each marker", () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(2_000)
+
+    const session = baseSession({
+      RESULT: [
+        row({
+          STNR: "42",
+          LASTINTERMEDIATENUMBER: 2,
+          LASTIMTIME: 1_000,
+          ETA: 11_000,
+        }),
+      ],
+    })
+    const markers = computeTrackDrivers({
+      session,
+      remoteTimeDiffMs: 0,
+      trackPathLength: 800,
+    })
+    const m = markers[0]
+    expect(m?.anchorDistanceM).toBe(200)
+    expect(m?.anchorTimeMs).toBe(1_000)
+    expect(m?.predictedVelocityMps).toBeCloseTo(80, 5)
+    expect(m?.trackLengthM).toBe(1000)
+    expect(m?.maxProjectedDistanceM).toBe(400)
   })
 })
 

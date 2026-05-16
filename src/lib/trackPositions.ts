@@ -7,6 +7,19 @@ const MIN_SEPARATION_M = 70
 const LEGACY_OFF_TRACK_INTERMEDIATES = new Set([8, 9, 12, 13, 14])
 const VER2_OFF_TRACK_INTERMEDIATES = new Set([14, 15, 16, 20])
 
+export type RowTimingProjection = {
+  /** Distance at last intermediate crossing (metres, no extrapolation). */
+  anchorDistanceM: number
+  /** `LASTIMTIME` on server clock (ms). */
+  anchorTimeMs: number
+  /** Predicted speed through the current sector (m/s), or 0. */
+  predictedVelocityMps: number
+  /** Soft cap for forward projection (metres). */
+  maxProjectedDistanceM: number
+  /** Extrapolated distance at `timeOfDayMs` (metres, before overlap separation). */
+  currentDistanceM: number
+}
+
 export type TrackDriverMarker = {
   startingNumber: string
   visible: boolean
@@ -18,6 +31,11 @@ export type TrackDriverMarker = {
   team: string
   position: string
   className: string
+  anchorDistanceM: number
+  anchorTimeMs: number
+  predictedVelocityMps: number
+  trackLengthM: number
+  maxProjectedDistanceM: number
 }
 
 export type ComputeTrackDriversInput = {
@@ -119,7 +137,7 @@ function nextIntermediateDistanceM(session: Pid0Frame, im: number): number {
   return trackLength > 0 ? Math.min(dist, trackLength) : dist
 }
 
-/** WIGE `calculateDistance` for one car row.
+/** WIGE timing projection for one car row (anchor + velocity + extrapolated distance).
  *
  * `ETA` is the **predicted lap-completion time** (server clock, ms) — not the
  * time at the next intermediate.  We distribute the total remaining time
@@ -127,48 +145,96 @@ function nextIntermediateDistanceM(session: Pid0Frame, im: number): number {
  * metre lengths so that a 7 297 m sector gets ~10× the time budget of a
  * 696 m sector at the same average pace.
  */
+export function computeRowTimingProjection(
+  session: Pid0Frame,
+  row: RawResultRow,
+  timeOfDayMs: number,
+): RowTimingProjection {
+  const trackLength = parseNum(session.TRACKLENGTH)
+  if (trackLength === null || trackLength <= 0) {
+    return {
+      anchorDistanceM: 0,
+      anchorTimeMs: 0,
+      predictedVelocityMps: 0,
+      maxProjectedDistanceM: 0,
+      currentDistanceM: 0,
+    }
+  }
+
+  const im = parseNum(row.LASTINTERMEDIATENUMBER)
+  if (im === null) {
+    return {
+      anchorDistanceM: trackLength,
+      anchorTimeMs: parseNum(row.LASTIMTIME) ?? 0,
+      predictedVelocityMps: 0,
+      maxProjectedDistanceM: trackLength,
+      currentDistanceM: trackLength,
+    }
+  }
+
+  const lastDist = lastIntermediateDistanceM(session, im)
+  const lastImTime = parseNum(row.LASTIMTIME)
+  const anchorTimeMs = lastImTime ?? 0
+
+  const eta = parseNum(row.ETA)
+  if (lastImTime === null || eta === null) {
+    return {
+      anchorDistanceM: lastDist,
+      anchorTimeMs,
+      predictedVelocityMps: 0,
+      maxProjectedDistanceM: lastDist,
+      currentDistanceM: lastDist,
+    }
+  }
+
+  const remainingSec = (eta - lastImTime) / 1000
+  const remainingM = trackLength - lastDist
+  if (remainingSec <= 0 || remainingM <= 0) {
+    return {
+      anchorDistanceM: lastDist,
+      anchorTimeMs,
+      predictedVelocityMps: 0,
+      maxProjectedDistanceM: lastDist,
+      currentDistanceM: lastDist,
+    }
+  }
+
+  const nextBound = nextIntermediateDistanceM(session, im)
+  const currentSectorM = Math.max(0, nextBound - lastDist)
+  const currentSectorSec = remainingSec * (currentSectorM / remainingM)
+  if (currentSectorSec <= 0) {
+    return {
+      anchorDistanceM: lastDist,
+      anchorTimeMs,
+      predictedVelocityMps: 0,
+      maxProjectedDistanceM: lastDist,
+      currentDistanceM: lastDist,
+    }
+  }
+
+  const elapsedSec = Math.max(0, (timeOfDayMs - lastImTime) / 1000)
+  const velocityMps = currentSectorM / currentSectorSec
+  const projected = lastDist + velocityMps * elapsedSec
+  const lookaheadCap = Math.min(nextBound + currentSectorM, trackLength)
+  const dist = Math.min(Math.trunc(projected), lookaheadCap)
+  const currentDistanceM = Number.isNaN(dist) ? trackLength : dist
+
+  return {
+    anchorDistanceM: lastDist,
+    anchorTimeMs,
+    predictedVelocityMps: velocityMps,
+    maxProjectedDistanceM: lookaheadCap,
+    currentDistanceM,
+  }
+}
+
+/** WIGE `calculateDistance` for one car row (extrapolated metres at `timeOfDayMs`). */
 export function calculateRowDistanceM(
   session: Pid0Frame,
   row: RawResultRow,
   timeOfDayMs: number,
 ): number {
-  const trackLength = parseNum(session.TRACKLENGTH)
-  if (trackLength === null || trackLength <= 0) {
-    return 0
-  }
-
-  const im = parseNum(row.LASTINTERMEDIATENUMBER)
-  if (im === null) {
-    return trackLength
-  }
-
-  const lastDist = lastIntermediateDistanceM(session, im)
-  const lastImTime = parseNum(row.LASTIMTIME)
-  const eta = parseNum(row.ETA)
-  if (lastImTime === null || eta === null) {
-    return lastDist
-  }
-
-  // remainingSec: predicted seconds from last intermediate crossing to finish.
-  // remainingM:  track metres from last intermediate to finish line.
-  const remainingSec = (eta - lastImTime) / 1000
-  const remainingM = trackLength - lastDist
-  if (remainingSec <= 0 || remainingM <= 0) {
-    return lastDist
-  }
-
-  const nextBound = nextIntermediateDistanceM(session, im)
-  const currentSectorM = Math.max(0, nextBound - lastDist)
-  // Allocate time to this sector proportional to its share of remaining metres.
-  const currentSectorSec = remainingSec * (currentSectorM / remainingM)
-  if (currentSectorSec <= 0) {
-    return lastDist
-  }
-
-  const elapsedSec = Math.max(0, (timeOfDayMs - lastImTime) / 1000)
-  const progress = Math.min(1, elapsedSec / currentSectorSec)
-  const dist = Math.min(Math.trunc(lastDist + currentSectorM * progress), nextBound)
-  return Number.isNaN(dist) ? trackLength : dist
+  return computeRowTimingProjection(session, row, timeOfDayMs).currentDistanceM
 }
 
 function isOnTrackIntermediate(session: Pid0Frame, im: number): boolean {
@@ -181,6 +247,7 @@ type WorkingRow = RawResultRow & {
   DIST: number
   ONTRACK: boolean
   restoreDist?: boolean
+  timing: RowTimingProjection
 }
 
 function applyTrackState(
@@ -189,7 +256,8 @@ function applyTrackState(
   trackState: string,
   timeOfDayMs: number,
 ): WorkingRow {
-  const w = { ...row, DIST: 0, ONTRACK: false } as WorkingRow
+  const timing = computeRowTimingProjection(session, row, timeOfDayMs)
+  const w = { ...row, DIST: 0, ONTRACK: false, timing } as WorkingRow
   const state = trackState.trim()
 
   if (state === "1" || state === "2" || state === "Code 60") {
@@ -206,7 +274,7 @@ function applyTrackState(
   }
 
   w.ONTRACK = true
-  w.DIST = calculateRowDistanceM(session, row, timeOfDayMs)
+  w.DIST = timing.currentDistanceM
   return w
 }
 
@@ -326,6 +394,11 @@ export function computeTrackDrivers(input: ComputeTrackDriversInput): TrackDrive
       team: str(row.TEAM),
       position: str(row.POSITION),
       className: str(row.CLASSNAME),
+      anchorDistanceM: row.timing.anchorDistanceM,
+      anchorTimeMs: row.timing.anchorTimeMs,
+      predictedVelocityMps: row.timing.predictedVelocityMps,
+      trackLengthM,
+      maxProjectedDistanceM: row.timing.maxProjectedDistanceM,
     }
   })
 }
