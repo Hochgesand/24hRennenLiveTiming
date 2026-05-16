@@ -5,6 +5,7 @@ import {
   calculateRowDistanceM,
   computeTrackDrivers,
   separateDriverDistances,
+  type TrackDriverHistory,
 } from "./trackPositions"
 
 function baseSession(overrides: Partial<Pid0Frame> = {}): Pid0Frame {
@@ -42,16 +43,34 @@ function row(overrides: Partial<RawResultRow> = {}): RawResultRow {
   }
 }
 
-describe("calculateRowDistanceM", () => {
-  it("interpolates between last intermediate and ETA", () => {
+describe("calculateRowDistanceM — ETA as predicted finish-line time", () => {
+  // baseSession: TRACKLENGTH=1000, S1L..S9L=100 each.
+  // IM=2 → lastDist=200, nextBound=300.
+
+  it("interpolates at the midpoint of the proportional current-sector window", () => {
     const session = baseSession()
+    // ETA−LASTIMTIME = 10 s, remainingM = 800 m.
+    // currentSectorSec = 10 * (100/800) = 1.25 s.
+    // At 0.625 s elapsed: progress = 0.5 → dist = 200 + 50 = 250.
+    const r = row({
+      LASTINTERMEDIATENUMBER: 2,
+      LASTIMTIME: 0,
+      ETA: 10_000,
+    })
+    const dist = calculateRowDistanceM(session, r, 625)
+    expect(dist).toBe(250)
+  })
+
+  it("clamps to nextBound when elapsed exceeds sector time budget", () => {
+    const session = baseSession()
+    // elapsedSec = 5 s >> currentSectorSec ≈ 1.25 s → progress = 1.
     const r = row({
       LASTINTERMEDIATENUMBER: 2,
       LASTIMTIME: 0,
       ETA: 10_000,
     })
     const dist = calculateRowDistanceM(session, r, 5_000)
-    expect(dist).toBe(250)
+    expect(dist).toBe(300) // nextBound = S1+S2+S3 = 300
   })
 
   it("falls back to the last known intermediate when segment duration is zero", () => {
@@ -66,13 +85,80 @@ describe("calculateRowDistanceM", () => {
     expect(calculateRowDistanceM(session, r, 200)).toBe(200)
   })
 
-  it("does not interpolate backwards before the last intermediate time", () => {
+  it("does not interpolate backwards — negative elapsed is clamped to zero", () => {
     const session = baseSession()
     const r = row({ LASTIMTIME: 10_000, ETA: 20_000 })
+    // timeOfDayMs < LASTIMTIME → elapsedSec < 0 → clamped to 0 → dist = lastDist
     expect(calculateRowDistanceM(session, r, 0)).toBe(200)
   })
 
-  it("keeps cumulative distances across VER=2 intermediates 3 through 7", () => {
+  it("sector-length weighting: current-sector time scales with its fraction of remainingM", () => {
+    // Nürburgring-like sizes: S4=696m (small), S5=5306m (large).
+    const session = baseSession({
+      TRACKLENGTH: 25378,
+      NROFINTERMEDIATETIMES: 8,
+      S1L: 1796,
+      S2L: 1968,
+      S3L: 3076,
+      S4L: 696,
+      S5L: 5306,
+      S6L: 2042,
+      S7L: 7297,
+      S8L: 1428,
+      S9L: 1769,
+    })
+    // IM=4 → lastDist = S1+S2+S3+S4 = 7536, nextBound = 7536+5306 = 12842.
+    // remainingM = 25378−7536 = 17842.
+    // Choose remainingSec so that currentSectorSec = 100 s exactly:
+    //   currentSectorSec = remainingSec * (5306/17842) = 100
+    //   → remainingSec = 100 * 17842/5306 ≈ 336.24 s → ETA−LASTIMTIME = 336240 ms.
+    const remainingSec = (100 * 17842) / 5306
+    const etaMinusLast = Math.round(remainingSec * 1000)
+    const r = row({
+      LASTINTERMEDIATENUMBER: 4,
+      LASTIMTIME: 0,
+      ETA: etaMinusLast,
+    })
+    // At 50 s elapsed: progress = 0.5 → dist ≈ 7536 + 5306*0.5 = 10189.
+    const dist = calculateRowDistanceM(session, r, 50_000)
+    expect(dist).toBeGreaterThan(7536 + 5306 * 0.45)
+    expect(dist).toBeLessThan(7536 + 5306 * 0.55)
+  })
+
+  it("diagnosis case #569 — IM=6, ETA−LASTIMTIME=624s gives sensible speed", () => {
+    // S1+S2+S3+S4+S5+S6 = 1796+1968+3076+696+5306+2042 = 14884 m.
+    // remainingM = 25378−14884 = 10494 m (matches the "10 494 m" in the diagnosis).
+    // At finish-line pace: 10494/624 ≈ 16.8 m/s ≈ 60 km/h — sensible.
+    // nextBound = 14884+7297 = 22181.
+    const session = baseSession({
+      TRACKLENGTH: 25378,
+      NROFINTERMEDIATETIMES: 8,
+      S1L: 1796,
+      S2L: 1968,
+      S3L: 3076,
+      S4L: 696,
+      S5L: 5306,
+      S6L: 2042,
+      S7L: 7297,
+      S8L: 1428,
+      S9L: 1769,
+    })
+    const r = row({
+      LASTINTERMEDIATENUMBER: 6,
+      LASTIMTIME: 0,
+      ETA: 624_000,
+    })
+    // At t=0 (just crossed IM6): progress=0 → lastDist=14884.
+    const dist0 = calculateRowDistanceM(session, r, 0)
+    expect(dist0).toBe(14884)
+
+    // At t=100s, should have moved forward but not past sector S7 end.
+    const dist100 = calculateRowDistanceM(session, r, 100_000)
+    expect(dist100).toBeGreaterThan(14884)
+    expect(dist100).toBeLessThanOrEqual(22181)
+  })
+
+  it("keeps cumulative distances across VER=2 intermediates when elapsed=0", () => {
     const session = baseSession({
       TRACKLENGTH: 4500,
       NROFINTERMEDIATETIMES: 9,
@@ -87,6 +173,7 @@ describe("calculateRowDistanceM", () => {
       S9L: 900,
     })
 
+    // At elapsed=0 progress=0 → returns lastDist for each IM.
     expect(
       calculateRowDistanceM(
         session,
@@ -124,7 +211,7 @@ describe("calculateRowDistanceM", () => {
     ).toBe(2800)
   })
 
-  it("interpolates inside the current high intermediate segment", () => {
+  it("clamps to nextBound when elapsedSec exceeds proportional sector budget", () => {
     const session = baseSession({
       TRACKLENGTH: 4500,
       NROFINTERMEDIATETIMES: 9,
@@ -139,17 +226,101 @@ describe("calculateRowDistanceM", () => {
       S9L: 900,
     })
 
+    // IM=6: lastDist=2100, nextBound=2800, remainingM=4500−2100=2400.
+    // currentSectorSec = 10*(700/2400) ≈ 2.917 s.
+    // At 5 s: progress=1 → clamped to nextBound=2800.
     const dist = calculateRowDistanceM(
       session,
       row({ LASTINTERMEDIATENUMBER: 6, LASTIMTIME: 0, ETA: 10_000 }),
       5_000,
     )
-
-    expect(dist).toBe(2450)
+    expect(dist).toBe(2800)
   })
 })
 
-describe("computeTrackDrivers", () => {
+describe("computeTrackDrivers — staleness guard", () => {
+  it("rejects a stale row whose LASTIMTIME regresses", () => {
+    const session = baseSession({
+      TRACKLENGTH: 1000,
+      RESULT: [
+        row({
+          STNR: "42",
+          LASTINTERMEDIATENUMBER: 3,
+          LASTIMTIME: 5_000,
+          ETA: 30_000,
+        }),
+      ],
+    })
+    const history: TrackDriverHistory = new Map()
+
+    // First call: primes the cache with IM=3, LASTIMTIME=5000.
+    const fresh = computeTrackDrivers({
+      session,
+      remoteTimeDiffMs: 0,
+      trackPathLength: 800,
+      history,
+    })
+    const freshDist = fresh[0]?.distanceM ?? 0
+
+    // Second call: stale row has LASTIMTIME=1000 < 5000 → should be rejected.
+    const staleSession = baseSession({
+      TRACKLENGTH: 1000,
+      RESULT: [
+        row({
+          STNR: "42",
+          LASTINTERMEDIATENUMBER: 1,
+          LASTIMTIME: 1_000,
+          ETA: 20_000,
+        }),
+      ],
+    })
+    const stale = computeTrackDrivers({
+      session: staleSession,
+      remoteTimeDiffMs: 0,
+      trackPathLength: 800,
+      history,
+    })
+    // Distance must not regress below the fresh result's last-intermediate.
+    expect(stale[0]?.distanceM).toBeGreaterThanOrEqual(freshDist)
+  })
+
+  it("accepts a fresher row and advances position", () => {
+    const session = baseSession({
+      TRACKLENGTH: 1000,
+      RESULT: [
+        row({
+          STNR: "42",
+          LASTINTERMEDIATENUMBER: 2,
+          LASTIMTIME: 3_000,
+          ETA: 30_000,
+        }),
+      ],
+    })
+    const history: TrackDriverHistory = new Map()
+
+    computeTrackDrivers({ session, remoteTimeDiffMs: 0, trackPathLength: 800, history })
+
+    const fresherSession = baseSession({
+      TRACKLENGTH: 1000,
+      RESULT: [
+        row({
+          STNR: "42",
+          LASTINTERMEDIATENUMBER: 3,
+          LASTIMTIME: 10_000,
+          ETA: 30_000,
+        }),
+      ],
+    })
+    const markers = computeTrackDrivers({
+      session: fresherSession,
+      remoteTimeDiffMs: 0,
+      trackPathLength: 800,
+      history,
+    })
+    // IM=3 → lastDist=300 ≥ IM=2 lastDist=200.
+    expect(markers[0]?.distanceM).toBeGreaterThanOrEqual(300)
+  })
+
   it("returns empty when session or track length missing", () => {
     expect(
       computeTrackDrivers({

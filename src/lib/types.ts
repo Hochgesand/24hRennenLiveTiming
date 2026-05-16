@@ -51,7 +51,7 @@ export interface RawResultRow {
   LLTS?: WireScalar
   /** Fastest lap — alternate wire key. */
   FLTS?: WireScalar
-  /** Expected time at next intermediate (ms, server clock). */
+  /** Predicted lap-completion time (server clock, ms). */
   ETA?: WireScalar
   /** Time at last intermediate (ms, server clock). */
   LASTIMTIME?: WireScalar

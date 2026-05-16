@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 import type { LapSectorStatus } from "@/domain"
 import { decodeLapStatus } from "@/domain"
@@ -13,7 +13,11 @@ import {
   type SectorSpan,
   type TimingSectorLengths,
 } from "@/lib/trackGeometry"
-import { computeTrackDrivers, type TrackDriverMarker } from "@/lib/trackPositions"
+import {
+  computeTrackDrivers,
+  type TrackDriverHistory,
+  type TrackDriverMarker,
+} from "@/lib/trackPositions"
 import {
   CHECKERED_TILES,
   DIRECTION_ARROW_DS,
@@ -73,6 +77,9 @@ const MIN_ZOOM = 0.6
 const MAX_ZOOM = 4
 const ZOOM_STEP = 0.3
 const BASE_WIDTH_PX = 1100
+
+/** EMA time constant for marker smoothing (seconds). */
+const EMA_TAU = 0.25
 
 function driverMarkerLabel(d: TrackDriverMarker): string {
   const parts = [`#${d.startingNumber}`]
@@ -156,6 +163,13 @@ export function TrackMapPanel() {
   const [pathElement, setPathElement] = useState<SVGPathElement | null>(null)
   const [resolveTimingSectors] = useState(() => createTimingSectorResolver())
 
+  /** Persistent staleness cache — prevents stale PID 0 rows from pulling markers back. */
+  const historyRef = useRef<TrackDriverHistory>(new Map())
+  /** Per-car EMA-smoothed SVG path lengths (updated each animation frame). */
+  const displayedLenRef = useRef<Map<string, number>>(new Map())
+  /** Timestamp of the previous animation frame (ms) for EMA dt computation. */
+  const lastFrameTsRef = useRef<number | undefined>(undefined)
+
   const statuses = useMemo(() => sectorStatusesForRow(firstRow), [firstRow])
   const geometry = useMemo<SectorGeometry | null>(
     () => (pathElement ? resolveSectorGeometry(pathElement, sessionMeta) : null),
@@ -183,7 +197,43 @@ export function TrackMapPanel() {
     trackState: track?.TRACKSTATE ?? sessionMeta?.TRACKSTATE,
     remoteTimeDiffMs,
     trackPathLength: geometry?.totalLength ?? 0,
+    history: historyRef.current,
   })
+
+  // --- Per-frame EMA smoothing ---
+  // Runs every render (driven by the rAF animTick), mutating displayedLenRef
+  // so TrackCarMarkers always reads a smoothly interpolated path length.
+  {
+    const now = Date.now()
+    const dtSec =
+      lastFrameTsRef.current !== undefined
+        ? Math.max(0, (now - lastFrameTsRef.current) / 1000)
+        : 0
+    lastFrameTsRef.current = now
+
+    if (geometry && timingSectors) {
+      const totalLength = geometry.totalLength
+      const alpha = dtSec > 0 ? 1 - Math.exp(-dtSec / EMA_TAU) : 1
+      for (const driver of drivers) {
+        if (!driver.visible) {
+          displayedLenRef.current.delete(driver.startingNumber)
+          continue
+        }
+        const rawLen = distanceToPathLength(driver.distanceM, timingSectors, geometry)
+        const prev = displayedLenRef.current.get(driver.startingNumber)
+        if (prev === undefined) {
+          displayedLenRef.current.set(driver.startingNumber, rawLen)
+        } else {
+          // Snap across the start/finish seam to avoid tweening the wrong way around.
+          const displayed =
+            Math.abs(rawLen - prev) > totalLength / 2
+              ? rawLen
+              : prev + (rawLen - prev) * alpha
+          displayedLenRef.current.set(driver.startingNumber, displayed)
+        }
+      }
+    }
+  }
 
   const canZoomIn = zoom < MAX_ZOOM - 1e-6
   const canZoomOut = zoom > MIN_ZOOM + 1e-6
@@ -385,9 +435,10 @@ export function TrackMapPanel() {
             <TrackCarMarkers
               drivers={drivers}
               pathLengthForDriver={(driver) =>
-                timingSectors
+                displayedLenRef.current.get(driver.startingNumber) ??
+                (timingSectors
                   ? distanceToPathLength(driver.distanceM, timingSectors, geometry)
-                  : driver.pathFraction * geometry.totalLength
+                  : driver.pathFraction * geometry.totalLength)
               }
               getPointAtLength={(len) => pathElement.getPointAtLength(len)}
             />

@@ -26,6 +26,42 @@ export type ComputeTrackDriversInput = {
   trackState?: WireScalar
   remoteTimeDiffMs: number
   trackPathLength: number
+  /**
+   * Optional per-car staleness cache.  When provided, any incoming row whose
+   * `LASTIMTIME` is older than the cached value is silently replaced with the
+   * cached timing fields — preventing stale PID 0 snapshots from pulling
+   * markers backwards.  Callers should persist this across renders (e.g. via
+   * `useRef`).
+   */
+  history?: TrackDriverHistory
+}
+
+/**
+ * Per-car staleness cache: maps `STNR` → the freshest `(LASTIMTIME, IM)` seen
+ * so far.  Pass a persistent `Map` to {@link computeTrackDrivers} via
+ * `ComputeTrackDriversInput.history`.
+ */
+export type TrackDriverHistory = Map<string, { lastImTimeMs: number; im: number }>
+
+/**
+ * For each row, if the incoming `LASTIMTIME` is older than the cached value
+ * (stale PID 0 snapshot), substitute the cached timing fields so distance
+ * stays put instead of snapping backwards.
+ */
+function freshenRows(rows: RawResultRow[], history: TrackDriverHistory): RawResultRow[] {
+  return rows.map((row) => {
+    const stnr = str(row.STNR)
+    if (!stnr) return row
+    const imNow = parseNum(row.LASTINTERMEDIATENUMBER)
+    const lastImNow = parseNum(row.LASTIMTIME)
+    if (imNow === null || lastImNow === null) return row
+    const cached = history.get(stnr)
+    if (cached && lastImNow < cached.lastImTimeMs) {
+      return { ...row, LASTIMTIME: cached.lastImTimeMs, LASTINTERMEDIATENUMBER: cached.im }
+    }
+    history.set(stnr, { lastImTimeMs: lastImNow, im: imNow })
+    return row
+  })
 }
 
 function parseNum(v: WireScalar | undefined): number | null {
@@ -83,7 +119,14 @@ function nextIntermediateDistanceM(session: Pid0Frame, im: number): number {
   return trackLength > 0 ? Math.min(dist, trackLength) : dist
 }
 
-/** WIGE `calculateDistance` for one car row. */
+/** WIGE `calculateDistance` for one car row.
+ *
+ * `ETA` is the **predicted lap-completion time** (server clock, ms) — not the
+ * time at the next intermediate.  We distribute the total remaining time
+ * (`ETA − LASTIMTIME`) across remaining sectors proportionally to their
+ * metre lengths so that a 7 297 m sector gets ~10× the time budget of a
+ * 696 m sector at the same average pace.
+ */
 export function calculateRowDistanceM(
   session: Pid0Frame,
   row: RawResultRow,
@@ -106,17 +149,25 @@ export function calculateRowDistanceM(
     return lastDist
   }
 
-  const nextBound = nextIntermediateDistanceM(session, im)
-  const segmentLength = Math.max(0, nextBound - lastDist)
-  const elapsedSec = (timeOfDayMs - lastImTime) / 1000
-  const segmentSec = (eta - lastImTime) / 1000
-  if (segmentSec <= 0) {
+  // remainingSec: predicted seconds from last intermediate crossing to finish.
+  // remainingM:  track metres from last intermediate to finish line.
+  const remainingSec = (eta - lastImTime) / 1000
+  const remainingM = trackLength - lastDist
+  if (remainingSec <= 0 || remainingM <= 0) {
     return lastDist
   }
 
-  const progress = Math.max(0, Math.min(1, elapsedSec / segmentSec))
-  const interpolated = lastDist + segmentLength * progress
-  const dist = Math.min(Math.trunc(interpolated), nextBound)
+  const nextBound = nextIntermediateDistanceM(session, im)
+  const currentSectorM = Math.max(0, nextBound - lastDist)
+  // Allocate time to this sector proportional to its share of remaining metres.
+  const currentSectorSec = remainingSec * (currentSectorM / remainingM)
+  if (currentSectorSec <= 0) {
+    return lastDist
+  }
+
+  const elapsedSec = Math.max(0, (timeOfDayMs - lastImTime) / 1000)
+  const progress = Math.min(1, elapsedSec / currentSectorSec)
+  const dist = Math.min(Math.trunc(lastDist + currentSectorM * progress), nextBound)
   return Number.isNaN(dist) ? trackLength : dist
 }
 
@@ -227,7 +278,7 @@ export function separateDriverDistances(
  * Derive live car markers from PID 0 leaderboard timing (WIGE race-track algorithm).
  */
 export function computeTrackDrivers(input: ComputeTrackDriversInput): TrackDriverMarker[] {
-  const { session, trackState, remoteTimeDiffMs, trackPathLength } = input
+  const { session, trackState, remoteTimeDiffMs, trackPathLength, history } = input
   if (!session?.RESULT?.length) {
     return []
   }
@@ -246,7 +297,9 @@ export function computeTrackDrivers(input: ComputeTrackDriversInput): TrackDrive
 
   const serverNowMs = Date.now() + remoteTimeDiffMs
 
-  const working: WorkingRow[] = session.RESULT.map((row) => {
+  const rawResult = history ? freshenRows(session.RESULT, history) : session.RESULT
+
+  const working: WorkingRow[] = rawResult.map((row) => {
     const adjusted: RawResultRow = { ...row }
     const eta = parseNum(row.ETA)
     const lastIm = parseNum(row.LASTIMTIME)

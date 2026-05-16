@@ -9,7 +9,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "replay:trackmap": "npx tsx scripts/replay-trackmap.ts"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.2.2",
